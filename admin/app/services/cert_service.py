@@ -1,5 +1,6 @@
 import logging
 import subprocess
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -104,6 +105,16 @@ def get_tls_status() -> TlsStatus:
         cert_subject=info.get("subject"),
         postfix_has_cert=postfix_has_cert,
     )
+
+
+def wait_for_cert(hostname: str, timeout: int = 30) -> bool:
+    """Poll every 2s until Caddy has a cert for the given hostname (max timeout seconds)."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if _find_cert_file(hostname) is not None:
+            return True
+        time.sleep(2)
+    return False
 
 
 def sync_certs_to_postfix() -> tuple[bool, str]:

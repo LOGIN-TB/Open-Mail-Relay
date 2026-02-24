@@ -91,6 +91,8 @@ Beide Ports erlauben Relay ausschliesslich fuer Absender-IPs aus den konfigurier
 
 ### Konfiguration
 - Hostname und Domain aendern
+- **Automatischer Caddy-Neustart bei Hostname-Aenderung** - Neues TLS-Zertifikat wird automatisch beschafft und nach Postfix synchronisiert
+- Fortschrittsanzeige bei Hostname-Aenderung (Postfix Reload → Caddy Neustart → TLS-Sync)
 - TLS-Zertifikat-Status (Let's Encrypt + Postfix)
 - Verbindungseinstellungen zum Kopieren (SMTP-Host, Ports, TLS-Status)
 - Manuelle Zertifikat-Synchronisierung und Postfix-Reload
@@ -103,6 +105,8 @@ Beide Ports erlauben Relay ausschliesslich fuer Absender-IPs aus den konfigurier
 ## TLS-Zertifikate
 
 Caddy beschafft und erneuert TLS-Zertifikate automatisch via Let's Encrypt. Die Zertifikate werden alle 6 Stunden automatisch nach Postfix synchronisiert. Eine manuelle Synchronisierung ist jederzeit ueber das Admin-Panel moeglich.
+
+Bei einer **Hostname-Aenderung** ueber das Admin-Panel wird Caddy automatisch neu gestartet, um ein neues Zertifikat zu beschaffen. Anschliessend wird das Zertifikat automatisch nach Postfix synchronisiert.
 
 **Voraussetzungen:**
 - DNS A-Records fuer den Mail-Hostname (aus `postfix/main.cf`) und `ADMIN_HOSTNAME` muessen auf den Server zeigen

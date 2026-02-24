@@ -56,6 +56,27 @@ def get_container_logs(tail: int = 100) -> str:
         return ""
 
 
+def get_caddy_container():
+    client = get_docker_client()
+    try:
+        return client.containers.get(settings.CADDY_CONTAINER)
+    except NotFound:
+        logger.error(f"Container '{settings.CADDY_CONTAINER}' not found")
+        return None
+
+
+def restart_caddy() -> tuple[bool, str]:
+    container = get_caddy_container()
+    if container is None:
+        return False, "Caddy container not found"
+    try:
+        container.restart(timeout=10)
+        return True, "Caddy container restarted"
+    except APIError as e:
+        logger.error(f"Caddy restart error: {e}")
+        return False, str(e)
+
+
 def get_container_status() -> dict:
     container = get_mail_container()
     if container is None:

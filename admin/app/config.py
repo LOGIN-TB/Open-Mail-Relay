@@ -17,6 +17,7 @@ class Settings(BaseSettings):
 
     # Docker
     MAIL_RELAY_CONTAINER: str = "open-mail-relay"
+    CADDY_CONTAINER: str = "open-mail-relay-caddy"
 
     # Stats
     LOG_RETENTION_DAYS: int = 30

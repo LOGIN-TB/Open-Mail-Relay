@@ -14,6 +14,8 @@ const tls = ref<any>(null)
 const connection = ref<any>(null)
 const loading = ref(false)
 const syncing = ref(false)
+const saving = ref(false)
+const savingSteps = ref<{ step: string; success: boolean; detail: string }[]>([])
 
 async function fetchConfig() {
   loading.value = true
@@ -32,12 +34,24 @@ async function fetchConfig() {
 }
 
 async function updateConfig(data: { hostname?: string; domain?: string }) {
+  saving.value = true
+  savingSteps.value = []
   try {
-    await api.put('/config', data)
-    toast.add({ severity: 'success', summary: t.common.success, detail: 'Konfiguration aktualisiert', life: 3000 })
+    const { data: res } = await api.put('/config', data)
+    const steps = res.steps || []
+    savingSteps.value = steps
+
+    const allOk = steps.every((s: any) => s.success)
+    if (allOk) {
+      toast.add({ severity: 'success', summary: t.common.success, detail: res.message, life: 5000 })
+    } else {
+      toast.add({ severity: 'warn', summary: t.common.success, detail: res.message, life: 8000 })
+    }
     await fetchConfig()
   } catch (e: any) {
     toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
+  } finally {
+    saving.value = false
   }
 }
 
@@ -77,6 +91,8 @@ onMounted(fetchConfig)
       <ServerConfigCard
         :config="config"
         :loading="loading"
+        :saving="saving"
+        :savingSteps="savingSteps"
         @update="updateConfig"
         @reload="reloadPostfix"
       />

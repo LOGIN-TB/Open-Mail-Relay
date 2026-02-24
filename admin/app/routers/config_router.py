@@ -11,8 +11,8 @@ from app.services.postfix_service import (
     update_main_cf,
     read_mynetworks,
 )
-from app.services.docker_service import reload_postfix
-from app.services.cert_service import get_tls_status, sync_certs_to_postfix
+from app.services.docker_service import reload_postfix, restart_caddy
+from app.services.cert_service import get_tls_status, sync_certs_to_postfix, wait_for_cert
 
 router = APIRouter()
 
@@ -71,6 +71,11 @@ def update_config(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Detect if hostname is actually changing
+    cf = read_main_cf()
+    old_hostname = cf.get("myhostname", "")
+    hostname_changed = body.hostname is not None and body.hostname != old_hostname
+
     changes = []
     if body.hostname:
         update_main_cf("myhostname", body.hostname)
@@ -82,7 +87,28 @@ def update_config(
     if not changes:
         raise HTTPException(status_code=400, detail="No changes provided")
 
+    steps = []
+
+    # Step 1: Postfix reload
     success, output = reload_postfix()
+    steps.append({"step": "postfix_reload", "success": success, "detail": output.strip()})
+
+    # Steps 2+3 only when hostname changed
+    if hostname_changed:
+        # Step 2: Restart Caddy
+        caddy_ok, caddy_msg = restart_caddy()
+        steps.append({"step": "caddy_restart", "success": caddy_ok, "detail": caddy_msg})
+
+        # Step 3: Wait for cert + sync TLS
+        if caddy_ok:
+            cert_ready = wait_for_cert(body.hostname, timeout=30)
+            if cert_ready:
+                sync_ok, sync_msg = sync_certs_to_postfix()
+                steps.append({"step": "tls_sync", "success": sync_ok, "detail": sync_msg})
+            else:
+                steps.append({"step": "tls_sync", "success": False, "detail": "Zertifikat nicht innerhalb von 30s bereit"})
+        else:
+            steps.append({"step": "tls_sync", "success": False, "detail": "Uebersprungen (Caddy-Neustart fehlgeschlagen)"})
 
     db.add(AuditLog(
         user_id=user.id,
@@ -92,7 +118,13 @@ def update_config(
     ))
     db.commit()
 
-    return {"message": "Configuration updated", "reload_success": success, "reload_output": output}
+    all_ok = all(s["success"] for s in steps)
+    if hostname_changed:
+        message = "Hostname erfolgreich geaendert" if all_ok else "Hostname geaendert, TLS-Zertifikat muss manuell synchronisiert werden"
+    else:
+        message = "Konfiguration aktualisiert"
+
+    return {"message": message, "steps": steps}
 
 
 @router.get("/tls", response_model=TlsStatus)

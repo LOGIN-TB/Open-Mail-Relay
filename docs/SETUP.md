@@ -71,7 +71,12 @@ myhostname = relay.example.com
 mydomain = example.com
 ```
 
-Dieser kann spaeter auch ueber das Admin-Panel geaendert werden.
+Dieser kann spaeter auch ueber das Admin-Panel geaendert werden. Bei einer Hostname-Aenderung im Admin-Panel wird automatisch:
+1. Postfix neu geladen
+2. Caddy neu gestartet (um ein neues TLS-Zertifikat zu beschaffen)
+3. Das Zertifikat nach Postfix synchronisiert
+
+Der Fortschritt wird im Admin-Panel Schritt fuer Schritt angezeigt.
 
 ## 3. Container bauen und starten
 
@@ -227,6 +232,7 @@ iptables -A INPUT -p tcp --dport 443 -j ACCEPT
 3. **Entrypoint-Skript** synchronisiert Zertifikate beim Container-Start von Caddy nach Postfix
 4. **Hintergrund-Task** wiederholt die Synchronisierung alle 6 Stunden
 5. **Admin-Panel** ermoeglicht manuelle Synchronisierung per Klick
+6. **Hostname-Aenderung** im Admin-Panel startet Caddy automatisch neu und synchronisiert das neue Zertifikat nach Postfix
 
 ### Manuelle Synchronisierung
 

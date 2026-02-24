@@ -71,6 +71,12 @@ export default {
     allowedNetworks: 'Erlaubte Netzwerke',
     noAuth: 'Keine (IP-basiert)',
     copied: 'In Zwischenablage kopiert',
+    hostnameHint: 'Aenderung des Hostnamens startet den Webserver neu und beschafft ein neues TLS-Zertifikat.',
+    stepPostfixReload: 'Postfix neu laden...',
+    stepCaddyRestart: 'Webserver neu starten...',
+    stepTlsSync: 'TLS-Zertifikat synchronisieren...',
+    hostnameChangeSuccess: 'Hostname erfolgreich geaendert',
+    hostnameChangePartial: 'Hostname geaendert, TLS-Zertifikat muss manuell synchronisiert werden',
   },
   users: {
     title: 'Benutzerverwaltung',
