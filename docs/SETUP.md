@@ -37,14 +37,19 @@ git clone https://github.com/LOGIN-TB/Open-Mail-Relay.git
 cd Open-Mail-Relay
 ```
 
-## 2. Umgebungsvariablen konfigurieren
+## 2. Konfigurationsdateien erstellen
 
 ```bash
+# Umgebungsvariablen
 cp .env.example .env
 nano .env
+
+# Postfix-Konfiguration
+cp postfix/main.cf.example postfix/main.cf
+cp postfix/mynetworks.example postfix/mynetworks
 ```
 
-Alle Variablen ausfuellen:
+`.env` ausfuellen:
 
 ```ini
 # FQDN des Admin-Panels (muss per DNS auf diesen Server zeigen)
@@ -64,7 +69,7 @@ LETSENCRYPT_EMAIL=admin@example.com
 
 ### Mail-Hostname konfigurieren
 
-Der Hostname des Mail-Relays wird in `postfix/main.cf` konfiguriert (nicht in `.env`):
+Den Hostname des Mail-Relays in `postfix/main.cf` anpassen:
 
 ```ini
 myhostname = relay.example.com
@@ -267,7 +272,19 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
-Die Datenbank (SQLite) und Mail-Queue bleiben ueber Updates hinweg erhalten, da sie in Docker Named Volumes liegen.
+### Was bleibt bei einem Update erhalten?
+
+| Daten | Speicherort | Sicher? |
+|-------|-------------|---------|
+| Admin-Datenbank (Benutzer, Logs, Statistiken) | Docker Volume `admin-data` | Ja |
+| Mail-Queue (Mails in Zustellung) | Docker Volume `postfix-queue` | Ja |
+| TLS-Zertifikate | Docker Volume `caddy-data` | Ja |
+| Mail-Logs | Docker Volume `mail-log` | Ja |
+| Postfix-Konfiguration (`postfix/main.cf`) | Lokale Datei (gitignored) | Ja |
+| Netzwerk-Whitelist (`postfix/mynetworks`) | Lokale Datei (gitignored) | Ja |
+| Umgebungsvariablen (`.env`) | Lokale Datei (gitignored) | Ja |
+
+Die Dateien `postfix/main.cf`, `postfix/mynetworks` und `.env` werden von Git nicht verfolgt und bleiben bei `git pull` **immer** unberuehrt. Alle Benutzerdaten liegen in Docker Named Volumes und ueberleben Container-Neustarts und Image-Rebuilds.
 
 ## Backup
 
@@ -286,7 +303,12 @@ docker compose exec open-mail-relay postqueue -p > queue-backup.txt
 
 ### Konfiguration
 
-Alle Konfigurationsdateien liegen im Repository (`postfix/`, `caddy/`, `.env`). Ein Git-Commit sichert diese automatisch.
+```bash
+# Lokale Konfiguration sichern
+cp .env ./backup-env
+cp postfix/main.cf ./backup-main.cf
+cp postfix/mynetworks ./backup-mynetworks
+```
 
 ## Troubleshooting
 

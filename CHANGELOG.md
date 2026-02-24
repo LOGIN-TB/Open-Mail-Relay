@@ -17,6 +17,9 @@ Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 ### Geaendert
 - **RetentionSettings verschoben** von Protokoll-Seite in die Konfiguration-Seite (thematisch passender)
 - Retention-Label von "Aufbewahrung" zu "Protokoll-Aufbewahrung" praezisiert
+- **Postfix-Konfiguration aus Git-Tracking entfernt** - `postfix/main.cf` und `postfix/mynetworks` werden nicht mehr von Git verfolgt, damit `git pull` nie Benutzerkonfiguration ueberschreibt. Vorlagen liegen als `.example`-Dateien im Repository
+- Schnellstart-Anleitung in README und SETUP.md um Kopier-Schritt fuer Postfix-Konfiguration ergaenzt
+- Update-Dokumentation mit Persistenz-Tabelle erweitert (was bleibt bei einem Update erhalten)
 
 ## [1.0.3] - 2026-02-24
 

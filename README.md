@@ -44,12 +44,17 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
 git clone https://github.com/LOGIN-TB/Open-Mail-Relay.git
 cd Open-Mail-Relay
 
-# 2. Umgebungsvariablen konfigurieren
+# 2. Konfiguration erstellen
 cp .env.example .env
-nano .env
+cp postfix/main.cf.example postfix/main.cf
+cp postfix/mynetworks.example postfix/mynetworks
 
-# 3. Container bauen und starten
-docker compose up -d
+# 3. Anpassen (Hostname, Passwort, etc.)
+nano .env
+nano postfix/main.cf
+
+# 4. Container bauen und starten
+docker compose up -d --build
 ```
 
 Das Admin-Panel ist danach unter `https://ADMIN_HOSTNAME` erreichbar.

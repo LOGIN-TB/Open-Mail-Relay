@@ -1,6 +1,10 @@
 # Environment
 .env
 
+# Benutzerspezifische Postfix-Konfiguration (Vorlagen: *.example)
+postfix/main.cf
+postfix/mynetworks
+
 # Python
 __pycache__/
 *.py[cod]

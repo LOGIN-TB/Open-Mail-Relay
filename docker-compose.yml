@@ -9,7 +9,7 @@ services:
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./caddy/entrypoint.sh:/etc/caddy/entrypoint.sh:ro
-      - ./postfix/main.cf:/etc/postfix-config/main.cf:ro
+      - ./postfix:/etc/postfix-config:ro
       - caddy-data:/data
       - caddy-config:/config
     environment:
