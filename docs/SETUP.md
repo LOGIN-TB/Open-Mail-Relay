@@ -20,11 +20,15 @@ relay.example.com.   A   203.0.113.10
 admin.example.com.   A   203.0.113.10
 ```
 
-Optional, aber empfohlen - ein reverse DNS (PTR) Eintrag fuer die Server-IP:
+**Wichtig:** Der reverse DNS (PTR) Eintrag der Server-IP **muss** auf den Mail-Hostname zeigen:
 
 ```
 10.113.0.203.in-addr.arpa.   PTR   relay.example.com.
 ```
+
+Postfix verwendet den `myhostname` (aus `postfix/main.cf`) als EHLO/HELO-Greeting bei ausgehenden Verbindungen. Empfangende Mailserver pruefen, ob der EHLO-Hostname zum PTR-Record der absendenden IP passt. Stimmen diese nicht ueberein, werden Mails haeufig als Spam eingestuft oder abgelehnt.
+
+> **Hinweis:** Der PTR-Record wird beim Hosting-Provider der Server-IP konfiguriert (nicht beim Domain-Registrar).
 
 ## 1. Repository klonen
 

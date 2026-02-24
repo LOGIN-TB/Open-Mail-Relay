@@ -106,6 +106,7 @@ Caddy beschafft und erneuert TLS-Zertifikate automatisch via Let's Encrypt. Die 
 
 **Voraussetzungen:**
 - DNS A-Records fuer den Mail-Hostname (aus `postfix/main.cf`) und `ADMIN_HOSTNAME` muessen auf den Server zeigen
+- **PTR-Record** (reverse DNS) der Server-IP muss auf den Mail-Hostname zeigen (Postfix verwendet `myhostname` als EHLO-Greeting - empfangende Server pruefen, ob EHLO und PTR uebereinstimmen)
 - Port 80 und 443 muessen von aussen erreichbar sein (fuer Let's Encrypt HTTP-01 Challenge)
 
 ## Queue-Management
