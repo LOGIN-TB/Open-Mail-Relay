@@ -115,7 +115,7 @@ Eigene Netzwerke im Admin-Panel unter **Netzwerke** hinzufuegen, z.B.:
 
 | CIDR | Beschreibung |
 |------|-------------|
-| `88.198.250.128/27` | Webserver-Netz |
+| `203.0.113.0/24` | Webserver-Netz |
 | `10.0.0.0/24` | Internes VPN |
 
 Aenderungen werden sofort wirksam - Postfix laedt die neue `mynetworks`-Datei automatisch.
@@ -199,8 +199,8 @@ Es wird empfohlen, die SMTP-Ports auf Netzwerk-Ebene zusaetzlich abzusichern:
 
 ```bash
 # Nur erlaubte IPs auf SMTP-Ports
-ufw allow from 88.198.250.128/27 to any port 25 proto tcp
-ufw allow from 88.198.250.128/27 to any port 587 proto tcp
+ufw allow from 203.0.113.0/24 to any port 25 proto tcp
+ufw allow from 203.0.113.0/24 to any port 587 proto tcp
 ufw deny 25
 ufw deny 587
 
@@ -213,8 +213,8 @@ ufw allow 443/tcp
 
 ```bash
 # SMTP nur fuer erlaubte Netze
-iptables -A INPUT -p tcp --dport 25 -s 88.198.250.128/27 -j ACCEPT
-iptables -A INPUT -p tcp --dport 587 -s 88.198.250.128/27 -j ACCEPT
+iptables -A INPUT -p tcp --dport 25 -s 203.0.113.0/24 -j ACCEPT
+iptables -A INPUT -p tcp --dport 587 -s 203.0.113.0/24 -j ACCEPT
 iptables -A INPUT -p tcp --dport 25 -j DROP
 iptables -A INPUT -p tcp --dport 587 -j DROP
 

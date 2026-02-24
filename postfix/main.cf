@@ -2,8 +2,8 @@
 compatibility_level = 3.6
 
 # Identitaet (myhostname wird ueber Admin-Panel verwaltet)
-myhostname = relay2.spamgo.de
-mydomain = spamgo.de
+myhostname = relay.example.com
+mydomain = example.com
 myorigin = $myhostname
 
 # Netzwerk
