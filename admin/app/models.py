@@ -51,6 +51,17 @@ class SystemSetting(Base):
     value = Column(String, nullable=False)
 
 
+class SmtpUser(Base):
+    __tablename__ = "smtp_users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String, unique=True, nullable=False, index=True)
+    password_encrypted = Column(String, nullable=False)  # Fernet-encrypted
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

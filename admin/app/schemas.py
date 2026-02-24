@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 
 from pydantic import BaseModel, field_validator
@@ -154,6 +155,38 @@ class RetentionSettings(BaseModel):
 class RetentionUpdate(BaseModel):
     retention_days: int | None = None
     stats_retention_days: int | None = None
+
+
+# --- SMTP Users ---
+
+class SmtpUserCreate(BaseModel):
+    username: str
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not re.match(r"^[a-z0-9]{4,16}$", v):
+            raise ValueError("Benutzername muss 4-16 Zeichen lang sein (nur Kleinbuchstaben und Ziffern)")
+        return v
+
+
+class SmtpUserOut(BaseModel):
+    id: int
+    username: str
+    is_active: bool
+    created_at: datetime | None = None
+    created_by: int | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class SmtpUserWithPassword(SmtpUserOut):
+    password: str
+
+
+class SmtpUserUpdate(BaseModel):
+    is_active: bool | None = None
 
 
 # --- Audit ---

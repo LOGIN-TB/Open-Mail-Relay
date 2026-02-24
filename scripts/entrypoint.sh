@@ -16,6 +16,32 @@ if [ -z "$MAIL_HOSTNAME" ] || [ "$MAIL_HOSTNAME" = "localhost" ]; then
 fi
 echo "Mail hostname: ${MAIL_HOSTNAME}"
 
+# Dovecot passwd-Datei vorbereiten (aus Bind-Mount oder leer)
+if [ -f /etc/postfix-config/dovecot-users ]; then
+    cp /etc/postfix-config/dovecot-users /etc/dovecot/users
+else
+    touch /etc/dovecot/users
+fi
+chmod 600 /etc/dovecot/users
+chown root:root /etc/dovecot/users
+
+# SASL-Einstellungen via postconf sicherstellen (fuer bestehende Installationen)
+postconf -e "smtpd_sasl_auth_enable = yes"
+postconf -e "smtpd_sasl_type = dovecot"
+postconf -e "smtpd_sasl_path = private/auth"
+postconf -e "smtpd_sasl_security_options = noanonymous"
+postconf -e "smtpd_tls_auth_only = yes"
+
+# Relay-Restrictions aktualisieren (permit_sasl_authenticated hinzufuegen)
+CURRENT_RESTRICTIONS=$(postconf -h smtpd_relay_restrictions 2>/dev/null || true)
+if ! echo "$CURRENT_RESTRICTIONS" | grep -q "permit_sasl_authenticated"; then
+    postconf -e "smtpd_relay_restrictions = permit_mynetworks, permit_sasl_authenticated, reject"
+fi
+
+# Dovecot starten (Auth-Only Modus)
+echo "Starting Dovecot (auth-only)..."
+dovecot
+
 # TLS-Zertifikate von Caddy synchronisieren
 sync_certs() {
     CERT_BASE="/etc/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory"
@@ -76,7 +102,7 @@ postfix check
 ) &
 
 # Graceful Shutdown: auf SIGTERM reagieren
-trap "echo 'Stopping Postfix...'; postfix stop; exit 0" SIGTERM SIGINT SIGQUIT
+trap "echo 'Stopping Postfix and Dovecot...'; postfix stop; dovecot stop; exit 0" SIGTERM SIGINT SIGQUIT
 
 # Postfix im Vordergrund starten
 postfix start-fg &

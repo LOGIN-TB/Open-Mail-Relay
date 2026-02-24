@@ -125,16 +125,40 @@ Eigene Netzwerke im Admin-Panel unter **Netzwerke** hinzufuegen, z.B.:
 
 Aenderungen werden sofort wirksam - Postfix laedt die neue `mynetworks`-Datei automatisch.
 
-## 6. Sendenden Server konfigurieren
+## 6. SMTP-Benutzer einrichten (optional)
+
+Neben der IP-basierten Autorisierung koennen SMTP-Benutzer angelegt werden, die sich per Benutzername/Passwort authentifizieren. Das ist besonders nuetzlich, wenn Clients von wechselnden IPs senden muessen.
+
+1. Im Admin-Panel unter **SMTP-Benutzer** → **SMTP-Benutzer anlegen**
+2. Benutzernamen eingeben (4-16 Zeichen, Kleinbuchstaben und Ziffern)
+3. Das Passwort wird automatisch generiert und angezeigt
+4. **PDF-Konfigurationsblatt herunterladen** mit allen Zugangsdaten und Einrichtungsanleitung
+
+> **Sicherheit:** SMTP-Auth wird nur ueber TLS angeboten (`smtpd_tls_auth_only = yes`). Passwort-Uebertragung im Klartext ist ausgeschlossen.
+
+## 7. Sendenden Server konfigurieren
 
 Auf dem Server, der Mails ueber das Relay versenden soll, die SMTP-Einstellungen konfigurieren:
+
+### Variante A: IP-basiert (ohne Authentifizierung)
 
 | Einstellung | Wert |
 |-------------|------|
 | SMTP-Server | `relay.example.com` |
 | Port | `25` (SMTP) oder `587` (Submission) |
-| Authentifizierung | Keine (IP-basiert) |
+| Authentifizierung | Keine (IP muss in Whitelist sein) |
 | Verschluesselung | STARTTLS (bei Port 587 Pflicht, bei Port 25 optional) |
+
+### Variante B: SMTP-Auth (Benutzername/Passwort)
+
+| Einstellung | Wert |
+|-------------|------|
+| SMTP-Server | `relay.example.com` |
+| Port | `587` (Submission) |
+| Authentifizierung | PLAIN oder LOGIN |
+| Benutzername | (aus Admin-Panel / PDF) |
+| Passwort | (aus Admin-Panel / PDF) |
+| Verschluesselung | STARTTLS (Pflicht) |
 
 > **Hinweis:** Alle ausgehenden Mails vom Relay zum Ziel-Mailserver werden immer TLS-verschluesselt (mindestens TLS 1.2). Mails an Server ohne TLS werden nicht zugestellt.
 
@@ -146,7 +170,7 @@ sendmail_path = /usr/sbin/sendmail -t -i
 sendmail_path = /usr/bin/msmtp -t
 ```
 
-### Beispiel: msmtp
+### Beispiel: msmtp (IP-basiert)
 
 ```ini
 account default
@@ -157,14 +181,44 @@ tls_starttls on
 auth off
 ```
 
-### Beispiel: Postfix als Client
+### Beispiel: msmtp (mit SMTP-Auth)
+
+```ini
+account default
+host relay.example.com
+port 587
+tls on
+tls_starttls on
+auth plain
+user smtpuser
+password xxxx-xxxxxx-xxxx
+```
+
+### Beispiel: Postfix als Client (IP-basiert)
 
 ```ini
 relayhost = [relay.example.com]:587
 smtp_tls_security_level = encrypt
 ```
 
-## 7. Testen
+### Beispiel: Postfix als Client (mit SMTP-Auth)
+
+```ini
+relayhost = [relay.example.com]:587
+smtp_tls_security_level = encrypt
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+smtp_sasl_security_options = noanonymous
+```
+
+Datei `/etc/postfix/sasl_passwd`:
+```
+[relay.example.com]:587 smtpuser:xxxx-xxxxxx-xxxx
+```
+
+Danach: `postmap /etc/postfix/sasl_passwd && chmod 600 /etc/postfix/sasl_passwd*`
+
+## 8. Testen
 
 ### swaks installieren
 
@@ -189,6 +243,26 @@ swaks --to empfaenger@zieldomain.de \
       --server relay.example.com \
       --port 587 \
       --tls
+```
+
+### Test mit SMTP-Auth (SASL)
+
+```bash
+swaks --to empfaenger@zieldomain.de \
+      --from absender@example.com \
+      --server relay.example.com \
+      --port 587 \
+      --tls \
+      --auth PLAIN \
+      --auth-user smtpuser \
+      --auth-password xxxx-xxxxxx-xxxx
+```
+
+### SASL im Container pruefen
+
+```bash
+# Dovecot-Auth testen
+docker compose exec open-mail-relay doveadm auth test smtpuser xxxx-xxxxxx-xxxx
 ```
 
 ### TLS-Verbindung pruefen
@@ -282,9 +356,13 @@ docker compose logs -f
 | Mail-Logs | Docker Volume `mail-log` | Ja |
 | Postfix-Konfiguration (`postfix/main.cf`) | Lokale Datei (gitignored) | Ja |
 | Netzwerk-Whitelist (`postfix/mynetworks`) | Lokale Datei (gitignored) | Ja |
+| SMTP-Benutzer (Passwoerter verschluesselt) | Docker Volume `admin-data` (SQLite) | Ja |
+| Dovecot passwd-Datei (`postfix/dovecot-users`) | Lokale Datei (gitignored) | Wird aus DB regeneriert |
 | Umgebungsvariablen (`.env`) | Lokale Datei (gitignored) | Ja |
 
 Die Dateien `postfix/main.cf`, `postfix/mynetworks` und `.env` werden von Git nicht verfolgt und bleiben bei `git pull` **immer** unberuehrt. Alle Benutzerdaten liegen in Docker Named Volumes und ueberleben Container-Neustarts und Image-Rebuilds.
+
+**SMTP-Benutzer**: Die verschluesselten Passwoerter liegen in der SQLite-Datenbank (Docker Volume). Die Dovecot-Passwortdatei (`postfix/dovecot-users`) wird bei jedem Admin-Panel-Start automatisch aus der Datenbank regeneriert.
 
 ## Backup
 
@@ -332,9 +410,9 @@ Port 587 erzwingt STARTTLS. Ohne gueltiges Zertifikat in Postfix ist keine Verbi
 
 ### "Relay access denied"
 
-Die Absender-IP ist nicht in den erlaubten Netzwerken. Loesung:
-1. IP des sendenden Servers pruefen
-2. Im Admin-Panel unter **Netzwerke** das passende CIDR hinzufuegen
+Die Absender-IP ist nicht in den erlaubten Netzwerken und es wurde keine gueltige SMTP-Authentifizierung durchgefuehrt. Loesung:
+1. IP des sendenden Servers pruefen und unter **Netzwerke** das passende CIDR hinzufuegen
+2. Oder: SMTP-Auth konfigurieren (unter **SMTP-Benutzer** einen Benutzer anlegen)
 
 ### Admin-Panel nicht erreichbar
 

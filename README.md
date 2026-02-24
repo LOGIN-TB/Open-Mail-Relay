@@ -10,6 +10,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
 - **Admin-Panel** - Webbasierte Verwaltung mit Dashboard, Netzwerk-Whitelist, Benutzerverwaltung und Serverkonfiguration
 - **Automatisches TLS** - Caddy beschafft und erneuert Let's Encrypt-Zertifikate automatisch. Synchronisierung nach Postfix alle 6 Stunden
 - **IP-basierte Autorisierung** - Relay nur fuer konfigurierte Netzwerke (CIDR), verwaltbar ueber das Admin-Panel
+- **SMTP-Benutzer-Authentifizierung (SASL)** - Zusaetzlich zur IP-Whitelist koennen SMTP-Benutzer mit Benutzername/Passwort von beliebigen IPs relayen. Dovecot-basiertes SASL, verwaltbar ueber das Admin-Panel inkl. PDF-Konfigurationsblatt
 - **Echtzeit-Monitoring** - Dashboard mit Zustellstatistiken, Queue-Status, Aktivitaetslog und Verlaufsdiagramm
 - **Einklappbare Seitenleiste** - Sidebar per Toggle-Button ein-/ausklappbar, Zustand wird gespeichert
 - **Docker-basiert** - Drei Container (Caddy, Admin-Panel, Open-Mail-Relay), einfach zu deployen
@@ -27,11 +28,13 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
   SMTP  :25  ──────┤──► Postfix Open Mail Relay                   │
   Sub.  :587 ──────┤──►   ├── STARTTLS (optional / erzwungen)│
                     │      ├── IP-Whitelist (mynetworks)      │
+                    │      ├── SMTP-Auth / SASL (Dovecot)     │
                     │      └── Weiterleitung an Ziel-MX       │
                     │                                         │
                     │   Admin-Panel (FastAPI + Vue 3)          │
                     │      ├── Dashboard & Statistiken        │
                     │      ├── Netzwerk-/IP-Verwaltung        │
+                    │      ├── SMTP-Benutzerverwaltung        │
                     │      ├── TLS-Zertifikat-Status          │
                     │      └── Benutzer- & Konfiguration      │
                     └─────────────────────────────────────────┘
@@ -82,7 +85,7 @@ Standard-Login: `admin` / (Wert aus `ADMIN_DEFAULT_PASSWORD`)
 
 Ausgehende Verbindungen zu Ziel-Mailservern werden **immer TLS-verschluesselt** (mindestens TLS 1.2). Mails an Server ohne TLS-Unterstuetzung werden nicht zugestellt.
 
-Beide Ports erlauben Relay ausschliesslich fuer Absender-IPs aus den konfigurierten Netzwerken. Es wird keine SASL-Authentifizierung verwendet - die Autorisierung erfolgt rein IP-basiert.
+Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (IP-basiert) **oder** fuer authentifizierte SMTP-Benutzer (SASL). SMTP-Auth wird nur ueber TLS angeboten (`smtpd_tls_auth_only = yes`).
 
 ## Admin-Panel
 
@@ -105,6 +108,14 @@ Beide Ports erlauben Relay ausschliesslich fuer Absender-IPs aus den konfigurier
 - TLS-Zertifikat-Status (Let's Encrypt + Postfix)
 - Verbindungseinstellungen zum Kopieren (SMTP-Host, Ports, TLS-Status)
 - Manuelle Zertifikat-Synchronisierung und Postfix-Reload
+
+### SMTP-Benutzer (SASL)
+- SMTP-Benutzer anlegen, aktivieren/deaktivieren, loeschen
+- Automatische Passwort-Generierung (Format: xxxx-xxxxxx-xxxx)
+- Passwort jederzeit regenerierbar
+- **PDF-Konfigurationsblatt** mit Zugangsdaten und Einrichtungsanleitung zum Herunterladen
+- Fernet-verschluesselte Passwoerter in der Datenbank
+- Automatische Synchronisierung mit Dovecot (SASL-Backend)
 
 ### Benutzerverwaltung
 - Admin-Benutzer anlegen, bearbeiten, loeschen
@@ -187,14 +198,24 @@ swaks --to empfaenger@zieldomain.de \
       --port 587 \
       --tls
 
-# Test von nicht-erlaubter IP → erwartet "Relay access denied"
+# Test mit SMTP-Auth (SASL) von beliebiger IP
+swaks --to empfaenger@zieldomain.de \
+      --from absender@quelldomain.de \
+      --server relay.example.com \
+      --port 587 \
+      --tls \
+      --auth PLAIN \
+      --auth-user smtpuser \
+      --auth-password xxxx-xxxxxx-xxxx
+
+# Test von nicht-erlaubter IP ohne Auth → erwartet "Relay access denied"
 ```
 
 ## Tech-Stack
 
 | Komponente | Technologie |
 |------------|-------------|
-| Mail-Server | Postfix auf Debian Bookworm Slim |
+| Mail-Server | Postfix + Dovecot (SASL) auf Debian Bookworm Slim |
 | Reverse Proxy | Caddy 2 (Auto-TLS) |
 | Backend | Python 3.12, FastAPI, SQLAlchemy, Alembic |
 | Frontend | Vue 3, TypeScript, PrimeVue, Chart.js |
@@ -230,6 +251,8 @@ Open-Mail-Relay/
 │       └── vite.config.ts      # Build-Konfiguration
 ├── caddy/
 │   └── Caddyfile               # Reverse-Proxy-Konfiguration
+├── dovecot/
+│   └── dovecot-sasl.conf       # Dovecot Auth-Only Konfiguration
 ├── postfix/
 │   ├── main.cf                 # Postfix-Hauptkonfiguration
 │   ├── master.cf               # Postfix-Dienste (SMTP + Submission)

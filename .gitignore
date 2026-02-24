@@ -4,6 +4,7 @@
 # Benutzerspezifische Postfix-Konfiguration (Vorlagen: *.example)
 postfix/main.cf
 postfix/mynetworks
+postfix/dovecot-users
 
 # Python
 __pycache__/

@@ -13,7 +13,9 @@ from app.database import engine, SessionLocal
 from app.models import Base, User
 from app.auth import get_password_hash
 from app.routers import auth_router, dashboard_router, network_router, config_router, logs_router
+from app.routers import smtp_users_router
 from app.services.stats_collector import StatsCollector
+from app.services.sasl_service import sync_dovecot_users
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,15 @@ async def lifespan(app: FastAPI):
     # Startup
     Base.metadata.create_all(bind=engine)
     create_default_admin()
+
+    # Sync Dovecot users from DB (regenerate passwd-file on every start)
+    db = SessionLocal()
+    try:
+        sync_dovecot_users(db)
+    except Exception as e:
+        logger.warning(f"Initial dovecot user sync failed: {e}")
+    finally:
+        db.close()
 
     global stats_collector
     stats_collector = StatsCollector()
@@ -82,6 +93,7 @@ app.include_router(dashboard_router.router, prefix="/api/dashboard", tags=["dash
 app.include_router(network_router.router, prefix="/api/networks", tags=["networks"])
 app.include_router(config_router.router, prefix="/api/config", tags=["config"])
 app.include_router(logs_router.router, prefix="/api/logs", tags=["logs"])
+app.include_router(smtp_users_router.router, prefix="/api/smtp-users", tags=["smtp-users"])
 
 # Serve Vue.js SPA
 static_dir = Path("/app/static")

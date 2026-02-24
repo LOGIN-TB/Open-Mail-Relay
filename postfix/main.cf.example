@@ -15,13 +15,18 @@ mynetworks = /etc/postfix/mynetworks
 relay_domains = *
 mydestination =
 
-# Open Relay NUR fuer erlaubte Netze
+# Relay fuer erlaubte Netze + authentifizierte Benutzer
 smtpd_relay_restrictions =
     permit_mynetworks,
+    permit_sasl_authenticated,
     reject
 
-# Kein Auth erforderlich
-smtpd_sasl_auth_enable = no
+# SASL-Authentifizierung via Dovecot
+smtpd_sasl_auth_enable = yes
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_security_options = noanonymous
+smtpd_tls_auth_only = yes
 
 # TLS ausgehend (erzwungen)
 smtp_tls_security_level = encrypt

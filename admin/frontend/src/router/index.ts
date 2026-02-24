@@ -30,6 +30,11 @@ const router = createRouter({
           component: () => import('../views/NetzwerkeView.vue'),
         },
         {
+          path: 'smtp-benutzer',
+          name: 'smtp-users',
+          component: () => import('../views/SmtpBenutzerView.vue'),
+        },
+        {
           path: 'konfiguration',
           name: 'config',
           component: () => import('../views/KonfigurationView.vue'),

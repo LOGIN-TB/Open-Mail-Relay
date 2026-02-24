@@ -13,6 +13,7 @@ const navItems = [
   { label: t.nav.dashboard, icon: 'pi pi-chart-bar', to: '/' },
   { label: t.nav.protokoll, icon: 'pi pi-list', to: '/protokoll' },
   { label: t.nav.networks, icon: 'pi pi-globe', to: '/netzwerke' },
+  { label: t.nav.smtpUsers, icon: 'pi pi-key', to: '/smtp-benutzer' },
   { label: t.nav.config, icon: 'pi pi-cog', to: '/konfiguration' },
   { label: t.nav.users, icon: 'pi pi-users', to: '/benutzer' },
 ]

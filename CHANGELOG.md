@@ -4,6 +4,40 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.1.0] - 2026-02-24
+
+### Hinzugefuegt
+- **SMTP-Benutzer-Authentifizierung (SASL)** - Clients koennen sich jetzt per Benutzername/Passwort authentifizieren und von beliebigen IPs relayen (zusaetzlich zur IP-Whitelist)
+- **Dovecot Auth-Only** im Postfix-Container - SASL-Backend ohne IMAP/POP3-Listener, nur Auth-Socket fuer Postfix
+- **SMTP-Benutzerverwaltung** im Admin-Panel (neue Seite "SMTP-Benutzer")
+  - Benutzer anlegen mit automatischer Passwort-Generierung (Format: xxxx-xxxxxx-xxxx)
+  - Aktivieren/Deaktivieren einzelner Benutzer
+  - Passwort regenerieren (altes wird sofort ungueltig)
+  - Benutzer loeschen
+  - **PDF-Konfigurationsblatt** mit Zugangsdaten, Einrichtungsanleitung und Sicherheitshinweis
+- Fernet-verschluesselte Passwoerter in der Datenbank (Schluessel aus ADMIN_SECRET_KEY via PBKDF2)
+- Automatische Dovecot-Synchronisierung bei jeder SMTP-Benutzer-Aenderung und beim Admin-Panel-Start
+- Neue API-Endpunkte:
+  - `GET/POST /api/smtp-users` - SMTP-Benutzer auflisten/anlegen
+  - `PUT /api/smtp-users/{id}` - Aktivieren/Deaktivieren
+  - `POST /api/smtp-users/{id}/regenerate-password` - Neues Passwort
+  - `DELETE /api/smtp-users/{id}` - Benutzer loeschen
+  - `GET /api/smtp-users/{id}/config-pdf` - PDF-Konfigurationsblatt
+- Navigation: Neuer Eintrag "SMTP-Benutzer" mit Schluessel-Icon
+- Alembic-Migration 003 fuer `smtp_users`-Tabelle
+- Python-Dependencies: `cryptography`, `reportlab`
+- `dovecot/dovecot-sasl.conf` - Dovecot-Konfiguration (Auth-Only)
+- Audit-Logging fuer alle SMTP-Benutzer-Aktionen
+
+### Geaendert
+- **Postfix Relay-Restrictions** - `permit_sasl_authenticated` hinzugefuegt (IP + Auth)
+- **Submission-Port 587** - Akzeptiert jetzt auch SASL-authentifizierte Verbindungen
+- `smtpd_tls_auth_only = yes` - AUTH wird nur ueber TLS angeboten (Sicherheit)
+- Dockerfile: `dovecot-core` installiert, Dovecot-Config wird kopiert
+- Entrypoint: Dovecot-Start, passwd-Datei-Vorbereitung, SASL-postconf, erweitertes Shutdown
+- Verbindungseinstellungen zeigen "IP-basiert + SMTP-Auth (SASL)" an
+- `.gitignore`: `postfix/dovecot-users` hinzugefuegt
+
 ## [1.0.4] - 2026-02-24
 
 ### Hinzugefuegt

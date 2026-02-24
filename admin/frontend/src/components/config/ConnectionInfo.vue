@@ -37,7 +37,7 @@ function copyAllSettings() {
     `SMTP-Server: ${c.smtp_host}`,
     `Ports:`,
     ...portLines,
-    `Authentifizierung: ${c.auth_required ? 'Ja' : 'Keine (IP-basiert)'}`,
+    `Authentifizierung: ${c.auth_required ? 'IP-basiert + SMTP-Auth (SASL)' : 'Keine (IP-basiert)'}`,
     `Max. Nachrichtengroesse: ${c.max_message_size_mb} MB`,
     `Erlaubte Netzwerke: ${c.allowed_networks.join(', ')}`,
   ].join('\n')
@@ -107,7 +107,7 @@ function copyAllSettings() {
         <div class="setting-row">
           <div class="setting-label">{{ t.config.authRequired }}</div>
           <div class="setting-value">
-            <span class="auth-badge">{{ connection.auth_required ? 'Ja (SASL)' : t.config.noAuth }}</span>
+            <span class="auth-badge">{{ connection.auth_required ? 'IP-basiert + SMTP-Auth (SASL)' : t.config.noAuth }}</span>
           </div>
         </div>
 
