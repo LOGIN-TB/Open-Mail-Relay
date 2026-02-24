@@ -1,0 +1,11 @@
+{
+	email {$LETSENCRYPT_EMAIL}
+}
+
+{$ADMIN_HOSTNAME} {
+	reverse_proxy admin-panel:8000
+}
+
+{$MAIL_HOSTNAME} {
+	respond "Open Mail Relay Server" 200
+}

@@ -1,0 +1,53 @@
+# Kompatibilitaetslevel
+compatibility_level = 3.6
+
+# Identitaet
+myhostname = relay.spamgo.de
+mydomain = spamgo.de
+myorigin = $myhostname
+
+# Netzwerk
+inet_interfaces = all
+inet_protocols = all
+
+# Relay-Konfiguration
+mynetworks = /etc/postfix/mynetworks
+relay_domains = *
+mydestination =
+
+# Open Relay NUR fuer erlaubte Netze
+smtpd_relay_restrictions =
+    permit_mynetworks,
+    reject
+
+# Kein Auth erforderlich
+smtpd_sasl_auth_enable = no
+
+# TLS ausgehend (opportunistisch)
+smtp_tls_security_level = may
+smtp_tls_loglevel = 1
+smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt
+
+# TLS eingehend (anbieten, aber nicht erzwingen)
+smtpd_tls_security_level = may
+smtpd_tls_loglevel = 1
+smtpd_tls_cert_file = /etc/postfix/tls/cert.pem
+smtpd_tls_key_file = /etc/postfix/tls/key.pem
+
+# Bounce-Handling: Keine Admin-Benachrichtigungen (reines Relay ohne lokale Zustellung)
+notify_classes =
+
+# Queue & Retry
+maximal_queue_lifetime = 5d
+bounce_queue_lifetime = 1d
+queue_run_delay = 300s
+minimal_backoff_time = 300s
+maximal_backoff_time = 4000s
+
+# Limits
+message_size_limit = 52428800
+smtpd_client_connection_count_limit = 20
+smtpd_client_connection_rate_limit = 100
+
+# Logging
+maillog_file = /dev/stdout

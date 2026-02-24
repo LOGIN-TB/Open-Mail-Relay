@@ -1,0 +1,73 @@
+# Changelog
+
+Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentiert.
+
+Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
+
+## [1.0.0] - 2026-02-24
+
+Erster vollstaendiger Release mit Admin-Panel und Submission-Port.
+
+### Hinzugefuegt
+
+#### Open Mail Relay (Postfix)
+- Postfix Mail-Relay auf Debian Bookworm Slim
+- **Port 25 (SMTP)** mit optionalem STARTTLS
+- **Port 587 (Submission)** mit erzwungenem STARTTLS
+- IP-basierte Autorisierung ueber `mynetworks` (CIDR)
+- Geschuetzte Netzwerke (127.0.0.0/8, 172.16.0.0/12), die nicht entfernt werden koennen
+- Opportunistisches TLS fuer ausgehende Verbindungen
+- Persistente Queue ueber Docker Named Volume
+- Logging auf stdout (Docker-native)
+- Queue-Monitoring-Skript (`check-queue.sh`)
+- 50 MB maximale Nachrichtengroesse
+
+#### TLS / Zertifikate
+- Automatische TLS-Zertifikatsbeschaffung via Caddy + Let's Encrypt
+- Automatische Erneuerung vor Ablaufdatum durch Caddy
+- Automatische Synchronisierung der Zertifikate von Caddy nach Postfix (alle 6 Stunden)
+- Manuelle Zertifikat-Synchronisierung ueber Admin-Panel
+- TLS-Status-Anzeige fuer Caddy und Postfix im Admin-Panel
+
+#### Admin-Panel (Backend)
+- FastAPI REST-API mit JWT-Authentifizierung (HS256, 8h Gueltigkeitsdauer)
+- bcrypt-Passwort-Hashing
+- Rate-Limiting beim Login (5 Versuche / 5 Minuten)
+- SQLite-Datenbank mit Alembic-Migrationen
+- API-Endpunkte:
+  - `POST /api/auth/login` - Anmeldung
+  - `GET /api/dashboard/stats` - Tagesstatistiken
+  - `GET /api/dashboard/chart` - Verlaufsdaten (24h)
+  - `GET /api/dashboard/activity` - Letzte Aktivitaet
+  - `GET /api/dashboard/queue` - Warteschlange
+  - `GET/POST/DELETE /api/networks` - Netzwerkverwaltung
+  - `GET/PUT /api/config` - Serverkonfiguration
+  - `GET /api/config/tls` - TLS-Status
+  - `POST /api/config/tls/sync` - Zertifikat-Sync ausloesen
+  - `GET /api/config/connection` - Verbindungseinstellungen
+  - `POST /api/config/reload` - Postfix neu laden
+  - `GET/POST/PUT/DELETE /api/auth/users` - Benutzerverwaltung
+  - `WS /api/logs/ws` - Echtzeit-Log-Stream
+- Hintergrund-Task fuer Echtzeit-Log-Parsing und Statistik-Erfassung
+- Audit-Log fuer alle administrativen Aktionen
+- Docker-Socket-Zugriff fuer Container-Management
+
+#### Admin-Panel (Frontend)
+- Vue 3 Single-Page-Application mit TypeScript
+- PrimeVue UI-Komponentenbibliothek
+- Deutsche Lokalisierung (i18n)
+- Responsive Design
+- Seiten:
+  - **Dashboard** - Statistik-Karten, Zustellungsverlauf (Chart.js), Queue-Status, Aktivitaets-Feed
+  - **Netzwerke** - CIDR-Whitelist mit Hinzufuegen/Entfernen, Schutz fuer System-Netzwerke
+  - **Konfiguration** - Hostname/Domain bearbeiten, TLS-Status mit Sync, Verbindungseinstellungen mit Kopier-Funktion
+  - **Benutzer** - CRUD fuer Admin-Benutzer
+  - **Login** - JWT-basierte Anmeldung
+
+#### Infrastruktur
+- Docker Compose mit 3 Services (Caddy, Admin-Panel, Open-Mail-Relay)
+- Caddy als Reverse Proxy mit automatischem HTTPS
+- Multi-Stage Docker Build fuer Admin-Panel (Node Build + Python Runtime)
+- Health-Check fuer Open-Mail-Relay-Container
+- Docker Named Volumes fuer Persistenz (Queue, Datenbank, Zertifikate)
+- Bridge-Netzwerk fuer Service-Kommunikation

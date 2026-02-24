@@ -1,0 +1,75 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: open-mail-relay-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      - ADMIN_HOSTNAME=${ADMIN_HOSTNAME}
+      - MAIL_HOSTNAME=${MAIL_HOSTNAME}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    restart: unless-stopped
+    networks:
+      - mail-network
+
+  admin-panel:
+    build: ./admin
+    container_name: open-mail-relay-admin
+    env_file:
+      - .env
+    volumes:
+      - ./postfix:/etc/postfix-config
+      - admin-data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - caddy-data:/etc/caddy-data:ro
+    depends_on:
+      open-mail-relay:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - mail-network
+
+  open-mail-relay:
+    build: .
+    container_name: open-mail-relay
+    hostname: ${MAIL_HOSTNAME:-mail-relay.example.com}
+    ports:
+      - "25:25"
+      - "587:587"
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./postfix:/etc/postfix-config
+      - postfix-queue:/var/spool/postfix
+      - mail-log:/var/log/mail
+      - caddy-data:/etc/caddy-data:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "postfix", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mail-network
+
+volumes:
+  postfix-queue:
+  mail-log:
+  admin-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  mail-network:
+    driver: bridge
