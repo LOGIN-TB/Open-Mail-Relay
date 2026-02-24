@@ -4,6 +4,23 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.0.1] - 2026-02-24
+
+### Geaendert
+- **MAIL_HOSTNAME aus .env entfernt** - `postfix/main.cf` ist jetzt die Single Source of Truth fuer den Mail-Hostname
+- Caddy liest den Hostname ueber neues `caddy/entrypoint.sh` aus `main.cf`
+- Postfix-Entrypoint (`scripts/entrypoint.sh`) liest Hostname aus `main.cf` statt aus Umgebungsvariable
+- Admin-Panel (`cert_service.py`, `config_router.py`) liest Hostname aus `main.cf` statt aus `settings`
+- `docker-compose.yml` vereinfacht: Caddy Entrypoint + main.cf Bind-Mount, keine `MAIL_HOSTNAME` env mehr
+- Dokumentation (`README.md`, `docs/SETUP.md`) aktualisiert
+
+### Hinzugefuegt
+- `caddy/entrypoint.sh` - Liest `myhostname` aus `main.cf` und startet Caddy
+- `_get_mail_hostname()` Helper in `cert_service.py`
+
+### Entfernt
+- `MAIL_HOSTNAME` aus `.env.example`, `docker-compose.yml` und `admin/app/config.py`
+
 ## [1.0.0] - 2026-02-24
 
 Erster vollstaendiger Release mit Admin-Panel und Submission-Port.
