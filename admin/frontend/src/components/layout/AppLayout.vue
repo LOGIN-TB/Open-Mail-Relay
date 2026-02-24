@@ -19,7 +19,8 @@ import TopBar from './TopBar.vue'
 <style scoped>
 .app-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .main-area {
@@ -27,12 +28,16 @@ import TopBar from './TopBar.vue'
   margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
   transition: margin-left 0.2s ease;
 }
 
 .content {
   padding: 1.5rem;
   flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 @media (max-width: 768px) {

@@ -4,6 +4,11 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.1.1] - 2026-02-24
+
+### Behoben
+- **Sidebar und TopBar scrollen nicht mehr mit** - Bei vielen Eintraegen im Dashboard oder Protokoll scrollte die gesamte Seite inkl. Navigation nach oben. Jetzt scrollt nur noch der Content-Bereich, Sidebar und TopBar bleiben fixiert.
+
 ## [1.1.0] - 2026-02-24
 
 ### Hinzugefuegt
