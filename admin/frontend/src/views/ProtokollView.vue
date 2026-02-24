@@ -51,6 +51,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  height: 100%;
+  min-height: 0;
 }
 
 .protokoll h2 {

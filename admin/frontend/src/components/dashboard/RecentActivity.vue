@@ -49,7 +49,8 @@ function formatTime(ts: string): string {
   <div class="card">
     <h3>{{ t.dashboard.recentActivity }}</h3>
     <div v-if="events.length === 0" class="no-data">{{ t.dashboard.noData }}</div>
-    <table v-else class="activity-table">
+    <div v-else class="table-scroll">
+    <table class="activity-table">
       <thead>
         <tr>
           <th>Zeit</th>
@@ -71,6 +72,7 @@ function formatTime(ts: string): string {
         </tr>
       </tbody>
     </table>
+    </div>
   </div>
 </template>
 
@@ -81,12 +83,22 @@ function formatTime(ts: string): string {
   padding: 1.25rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   border: 1px solid #e2e8f0;
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
 }
 
 .card h3 {
   font-size: 1rem;
   color: #1e293b;
   margin-bottom: 1rem;
+  flex-shrink: 0;
+}
+
+.table-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .no-data {
@@ -108,6 +120,10 @@ function formatTime(ts: string): string {
   color: #64748b;
   font-weight: 600;
   font-size: 0.8rem;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
 }
 
 .activity-table td {

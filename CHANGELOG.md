@@ -4,6 +4,11 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.1.2] - 2026-02-24
+
+### Behoben
+- **Sticky Tabellenueberschriften** - In der Protokoll-Ansicht und im Dashboard (Letzte Aktivitaet) bleiben die Spaltenueberschriften (Zeitpunkt, Status, Absender, ...) beim Scrollen sichtbar. Nur die Tabellenzeilen scrollen, Header bleibt fixiert.
+
 ## [1.1.1] - 2026-02-24
 
 ### Behoben

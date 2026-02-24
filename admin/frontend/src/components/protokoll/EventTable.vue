@@ -47,6 +47,7 @@ function formatTime(ts: string): string {
     <div v-if="store.loading" class="no-data">{{ t.common.loading }}</div>
     <div v-else-if="store.events.length === 0" class="no-data">{{ t.protokoll.noEvents }}</div>
     <template v-else>
+      <div class="table-scroll">
       <table class="event-table">
         <thead>
           <tr>
@@ -84,6 +85,7 @@ function formatTime(ts: string): string {
           </template>
         </tbody>
       </table>
+      </div>
 
       <div class="pagination">
         <button class="page-btn" :disabled="store.page <= 1" @click="store.setPage(store.page - 1)">
@@ -108,7 +110,17 @@ function formatTime(ts: string): string {
   padding: 1.25rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.table-scroll {
+  flex: 1;
+  overflow-y: auto;
   overflow-x: auto;
+  min-height: 0;
 }
 
 .no-data {
@@ -131,6 +143,10 @@ function formatTime(ts: string): string {
   font-weight: 600;
   font-size: 0.8rem;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
 }
 
 .event-table td {
