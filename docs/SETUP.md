@@ -129,7 +129,9 @@ Auf dem Server, der Mails ueber das Relay versenden soll, die SMTP-Einstellungen
 | SMTP-Server | `relay.example.com` |
 | Port | `25` (SMTP) oder `587` (Submission) |
 | Authentifizierung | Keine (IP-basiert) |
-| Verschluesselung | STARTTLS (bei Port 587 Pflicht) |
+| Verschluesselung | STARTTLS (bei Port 587 Pflicht, bei Port 25 optional) |
+
+> **Hinweis:** Alle ausgehenden Mails vom Relay zum Ziel-Mailserver werden immer TLS-verschluesselt (mindestens TLS 1.2). Mails an Server ohne TLS werden nicht zugestellt.
 
 ### Beispiel: PHP (php.ini)
 

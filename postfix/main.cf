@@ -23,10 +23,12 @@ smtpd_relay_restrictions =
 # Kein Auth erforderlich
 smtpd_sasl_auth_enable = no
 
-# TLS ausgehend (opportunistisch)
-smtp_tls_security_level = may
+# TLS ausgehend (erzwungen)
+smtp_tls_security_level = encrypt
 smtp_tls_loglevel = 1
 smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt
+smtp_tls_mandatory_protocols = >=TLSv1.2
+smtp_tls_mandatory_ciphers = high
 
 # TLS eingehend (anbieten, aber nicht erzwingen)
 smtpd_tls_security_level = may

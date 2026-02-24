@@ -4,6 +4,14 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.0.3] - 2026-02-24
+
+### Geaendert
+- **TLS ausgehend erzwungen** - `smtp_tls_security_level` von `may` auf `encrypt` geaendert. Alle ausgehenden Mails werden jetzt immer TLS-verschluesselt
+- **TLS 1.2 Minimum** - `smtp_tls_mandatory_protocols = >=TLSv1.2` und `smtp_tls_mandatory_ciphers = high` fuer ausgehende Verbindungen
+- Persoenliche Netzwerk- und Hostnamedaten durch Beispieldaten ersetzt (203.0.113.0/24, relay.example.com)
+- Dokumentation um ausgehende TLS-Verschluesselung ergaenzt
+
 ## [1.0.2] - 2026-02-24
 
 ### Hinzugefuegt

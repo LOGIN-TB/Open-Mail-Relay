@@ -6,6 +6,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
 
 - **Postfix Open Mail Relay** - Leitet E-Mails fuer konfigurierte Netzwerke an Ziel-MX-Server weiter
 - **Zwei SMTP-Ports** - Port 25 (SMTP, STARTTLS optional) und Port 587 (Submission, STARTTLS erzwungen)
+- **Erzwungenes TLS ausgehend** - Alle ausgehenden Mails werden TLS-verschluesselt (min. TLS 1.2)
 - **Admin-Panel** - Webbasierte Verwaltung mit Dashboard, Netzwerk-Whitelist, Benutzerverwaltung und Serverkonfiguration
 - **Automatisches TLS** - Caddy beschafft und erneuert Let's Encrypt-Zertifikate automatisch. Synchronisierung nach Postfix alle 6 Stunden
 - **IP-basierte Autorisierung** - Relay nur fuer konfigurierte Netzwerke (CIDR), verwaltbar ueber das Admin-Panel
@@ -70,8 +71,10 @@ Standard-Login: `admin` / (Wert aus `ADMIN_DEFAULT_PASSWORD`)
 
 | Port | Protokoll | TLS | Zertifikat erforderlich |
 |------|-----------|-----|-------------------------|
-| 25   | SMTP      | STARTTLS optional | Nein (funktioniert auch ohne) |
-| 587  | Submission | STARTTLS erzwungen | Ja |
+| 25   | SMTP      | STARTTLS optional (eingehend) | Nein (funktioniert auch ohne) |
+| 587  | Submission | STARTTLS erzwungen (eingehend) | Ja |
+
+Ausgehende Verbindungen zu Ziel-Mailservern werden **immer TLS-verschluesselt** (mindestens TLS 1.2). Mails an Server ohne TLS-Unterstuetzung werden nicht zugestellt.
 
 Beide Ports erlauben Relay ausschliesslich fuer Absender-IPs aus den konfigurierten Netzwerken. Es wird keine SASL-Authentifizierung verwendet - die Autorisierung erfolgt rein IP-basiert.
 
