@@ -5,6 +5,7 @@ import api from '../api/client'
 import ServerConfigCard from '../components/config/ServerConfig.vue'
 import TlsStatusCard from '../components/config/TlsStatus.vue'
 import ConnectionInfoCard from '../components/config/ConnectionInfo.vue'
+import RetentionSettings from '../components/config/RetentionSettings.vue'
 import t from '../i18n/de'
 
 const toast = useToast()
@@ -102,6 +103,7 @@ onMounted(fetchConfig)
         :syncing="syncing"
         @sync="syncTlsCert"
       />
+      <RetentionSettings />
     </div>
   </div>
 </template>

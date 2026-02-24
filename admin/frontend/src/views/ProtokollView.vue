@@ -4,7 +4,6 @@ import { useProtokollStore } from '../stores/protokoll'
 import EventFilters from '../components/protokoll/EventFilters.vue'
 import EventTable from '../components/protokoll/EventTable.vue'
 import LiveLogPanel from '../components/protokoll/LiveLogPanel.vue'
-import RetentionSettings from '../components/protokoll/RetentionSettings.vue'
 import t from '../i18n/de'
 
 const store = useProtokollStore()
@@ -39,7 +38,6 @@ onMounted(() => {
     <template v-if="activeTab === 'events'">
       <EventFilters />
       <EventTable />
-      <RetentionSettings />
     </template>
 
     <template v-if="activeTab === 'live'">

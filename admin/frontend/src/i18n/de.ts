@@ -125,7 +125,7 @@ export default {
     liveReconnect: 'Neu verbinden',
     liveClear: 'Leeren',
     liveAutoScroll: 'Auto-Scroll',
-    retention: 'Aufbewahrung',
+    retention: 'Protokoll-Aufbewahrung',
     retentionEvents: 'Ereignisse (Tage)',
     retentionStats: 'Statistiken (Tage)',
     retentionSave: 'Speichern',
