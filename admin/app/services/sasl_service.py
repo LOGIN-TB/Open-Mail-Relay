@@ -45,7 +45,9 @@ def sync_dovecot_users(db: Session) -> tuple[bool, str]:
         if exit_code != 0:
             return False, f"Failed to copy dovecot-users: {output}"
 
-        exit_code, output = exec_in_container("chmod 600 /etc/dovecot/users")
+        exit_code, output = exec_in_container(
+            "sh -c 'chown root:dovecot /etc/dovecot/users && chmod 640 /etc/dovecot/users'"
+        )
         if exit_code != 0:
             return False, f"Failed to set permissions: {output}"
 

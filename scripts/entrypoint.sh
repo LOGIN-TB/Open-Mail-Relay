@@ -22,8 +22,8 @@ if [ -f /etc/postfix-config/dovecot-users ]; then
 else
     touch /etc/dovecot/users
 fi
-chmod 600 /etc/dovecot/users
-chown root:root /etc/dovecot/users
+chown root:dovecot /etc/dovecot/users
+chmod 640 /etc/dovecot/users
 
 # SASL-Einstellungen via postconf sicherstellen (fuer bestehende Installationen)
 postconf -e "smtpd_sasl_auth_enable = yes"
