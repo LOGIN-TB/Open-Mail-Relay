@@ -76,11 +76,16 @@ def _check_postfix_has_cert() -> bool:
     return exit_code2 == 0
 
 
-def get_tls_status() -> TlsStatus:
-    from app.config import settings
+def _get_mail_hostname() -> str:
+    """Liest den Mail-Hostname aus postfix/main.cf (Single Source of Truth)."""
+    from app.services.postfix_service import read_main_cf
+    cf = read_main_cf()
+    return cf.get("myhostname", "localhost")
 
+
+def get_tls_status() -> TlsStatus:
     # Check for mail hostname cert
-    cert_file = _find_cert_file(settings.MAIL_HOSTNAME)
+    cert_file = _find_cert_file(_get_mail_hostname())
 
     postfix_has_cert = _check_postfix_has_cert()
 
@@ -103,10 +108,9 @@ def get_tls_status() -> TlsStatus:
 
 def sync_certs_to_postfix() -> tuple[bool, str]:
     """Trigger certificate sync from Caddy to Postfix via docker exec."""
-    from app.config import settings
     from app.services.docker_service import exec_in_container
 
-    hostname = settings.MAIL_HOSTNAME
+    hostname = _get_mail_hostname()
 
     # Find cert for mail hostname only (never fall back to admin cert)
     cert_file = _find_cert_file(hostname)

@@ -35,7 +35,7 @@ def get_connection_info(user: User = Depends(get_current_user)):
     tls = get_tls_status()
     networks = read_mynetworks()
 
-    hostname = cf.get("myhostname", settings.MAIL_HOSTNAME)
+    hostname = cf.get("myhostname", "unknown")
     size_bytes = int(cf.get("message_size_limit", "52428800"))
 
     tls_level = cf.get("smtpd_tls_security_level", "may")

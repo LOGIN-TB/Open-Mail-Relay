@@ -8,8 +8,7 @@ class Settings(BaseSettings):
     ADMIN_DEFAULT_PASSWORD: str = "admin"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8 hours
 
-    # Hostnames
-    MAIL_HOSTNAME: str = "mail-relay.example.com"
+    # Hostname (nur Admin-Interface; Mail-Hostname wird in postfix/main.cf verwaltet)
     ADMIN_HOSTNAME: str = "admin.example.com"
 
     # Paths
@@ -30,17 +29,11 @@ class Settings(BaseSettings):
     model_config = {"env_prefix": "ADMIN_", "env_file": ".env", "extra": "ignore"}
 
 
-# Singleton – override SECRET_KEY & MAIL_HOSTNAME from env without prefix too
-class _Settings(Settings):
-    model_config = {"env_prefix": "", "env_file": ".env", "extra": "ignore"}
-
-
+# Singleton – override Settings from env without prefix
 settings = Settings()
-# Also pick up MAIL_HOSTNAME without prefix
+
 import os
 
-if val := os.getenv("MAIL_HOSTNAME"):
-    settings.MAIL_HOSTNAME = val
 if val := os.getenv("ADMIN_HOSTNAME"):
     settings.ADMIN_HOSTNAME = val
 if val := os.getenv("ADMIN_SECRET_KEY"):

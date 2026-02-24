@@ -43,9 +43,6 @@ nano .env
 Alle Variablen ausfuellen:
 
 ```ini
-# FQDN des Mail-Servers (muss per DNS auf diesen Server zeigen)
-MAIL_HOSTNAME=relay.example.com
-
 # FQDN des Admin-Panels (muss per DNS auf diesen Server zeigen)
 ADMIN_HOSTNAME=admin.example.com
 
@@ -60,6 +57,17 @@ LETSENCRYPT_EMAIL=admin@example.com
 ```
 
 > **Tipp:** Sicheren Secret Key generieren: `openssl rand -hex 32`
+
+### Mail-Hostname konfigurieren
+
+Der Hostname des Mail-Relays wird in `postfix/main.cf` konfiguriert (nicht in `.env`):
+
+```ini
+myhostname = relay.example.com
+mydomain = example.com
+```
+
+Dieser kann spaeter auch ueber das Admin-Panel geaendert werden.
 
 ## 3. Container bauen und starten
 

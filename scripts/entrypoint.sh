@@ -8,12 +8,13 @@ if [ -d /etc/postfix-config ]; then
     cp /etc/postfix-config/mynetworks /etc/postfix/mynetworks
 fi
 
-# Hostname aus ENV-Variable ueberschreiben
-if [ -n "$MAIL_HOSTNAME" ]; then
-    postconf -e "myhostname = ${MAIL_HOSTNAME}"
-    DOMAIN=$(echo "$MAIL_HOSTNAME" | sed 's/^[^.]*\.//')
-    postconf -e "mydomain = ${DOMAIN}"
+# Hostname aus main.cf lesen (Single Source of Truth)
+MAIL_HOSTNAME=$(postconf -h myhostname 2>/dev/null)
+if [ -z "$MAIL_HOSTNAME" ] || [ "$MAIL_HOSTNAME" = "localhost" ]; then
+    echo "ERROR: myhostname ist nicht in main.cf konfiguriert. Abbruch." >&2
+    exit 1
 fi
+echo "Mail hostname: ${MAIL_HOSTNAME}"
 
 # TLS-Zertifikate von Caddy synchronisieren
 sync_certs() {

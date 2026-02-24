@@ -2,16 +2,18 @@ services:
   caddy:
     image: caddy:2-alpine
     container_name: open-mail-relay-caddy
+    entrypoint: ["/bin/sh", "/etc/caddy/entrypoint.sh"]
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/entrypoint.sh:/etc/caddy/entrypoint.sh:ro
+      - ./postfix/main.cf:/etc/postfix-config/main.cf:ro
       - caddy-data:/data
       - caddy-config:/config
     environment:
       - ADMIN_HOSTNAME=${ADMIN_HOSTNAME}
-      - MAIL_HOSTNAME=${MAIL_HOSTNAME}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
     restart: unless-stopped
     networks:
@@ -37,13 +39,10 @@ services:
   open-mail-relay:
     build: .
     container_name: open-mail-relay
-    hostname: ${MAIL_HOSTNAME:-mail-relay.example.com}
     ports:
       - "25:25"
       - "587:587"
     restart: unless-stopped
-    env_file:
-      - .env
     volumes:
       - ./postfix:/etc/postfix-config
       - postfix-queue:/var/spool/postfix

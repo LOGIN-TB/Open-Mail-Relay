@@ -55,15 +55,16 @@ Standard-Login: `admin` / (Wert aus `ADMIN_DEFAULT_PASSWORD`)
 
 > Detaillierte Anleitung: [docs/SETUP.md](docs/SETUP.md)
 
-## Umgebungsvariablen
+## Umgebungsvariablen (.env)
 
 | Variable | Beschreibung | Beispiel |
 |---|---|---|
-| `MAIL_HOSTNAME` | FQDN des Mail-Servers (Postfix `myhostname`) | `relay.example.com` |
 | `ADMIN_HOSTNAME` | FQDN des Admin-Panels | `admin.example.com` |
 | `ADMIN_SECRET_KEY` | Geheimer Schluessel fuer JWT-Token-Signierung | `ein-langer-zufaelliger-string` |
 | `ADMIN_DEFAULT_PASSWORD` | Initiales Passwort fuer den `admin`-Benutzer | `mein-sicheres-passwort` |
 | `LETSENCRYPT_EMAIL` | E-Mail-Adresse fuer Let's Encrypt-Benachrichtigungen | `admin@example.com` |
+
+> **Hinweis:** Der Mail-Relay-Hostname (`myhostname`) wird direkt in `postfix/main.cf` konfiguriert und ueber das Admin-Panel verwaltet - nicht in der `.env`-Datei.
 
 ## SMTP-Ports
 
@@ -104,7 +105,7 @@ Beide Ports erlauben Relay ausschliesslich fuer Absender-IPs aus den konfigurier
 Caddy beschafft und erneuert TLS-Zertifikate automatisch via Let's Encrypt. Die Zertifikate werden alle 6 Stunden automatisch nach Postfix synchronisiert. Eine manuelle Synchronisierung ist jederzeit ueber das Admin-Panel moeglich.
 
 **Voraussetzungen:**
-- DNS A-Records fuer `MAIL_HOSTNAME` und `ADMIN_HOSTNAME` muessen auf den Server zeigen
+- DNS A-Records fuer den Mail-Hostname (aus `postfix/main.cf`) und `ADMIN_HOSTNAME` muessen auf den Server zeigen
 - Port 80 und 443 muessen von aussen erreichbar sein (fuer Let's Encrypt HTTP-01 Challenge)
 
 ## Queue-Management
