@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { useLayoutStore } from '../../stores/layout'
 import t from '../../i18n/de'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const layout = useLayoutStore()
 
 const navItems = [
   { label: t.nav.dashboard, icon: 'pi pi-chart-bar', to: '/' },
@@ -27,10 +29,10 @@ function logout() {
 </script>
 
 <template>
-  <nav class="sidebar">
+  <nav class="sidebar" :class="{ collapsed: layout.collapsed }">
     <div class="logo">
       <i class="pi pi-envelope" style="font-size: 1.5rem"></i>
-      <span>Open Mail Relay</span>
+      <span v-show="!layout.collapsed" class="logo-text">Open Mail Relay</span>
     </div>
 
     <ul class="nav-list">
@@ -39,21 +41,35 @@ function logout() {
           :to="item.to"
           class="nav-item"
           :class="{ active: isActive(item.to) }"
+          :title="layout.collapsed ? item.label : undefined"
         >
           <i :class="item.icon"></i>
-          <span>{{ item.label }}</span>
+          <span v-show="!layout.collapsed">{{ item.label }}</span>
         </router-link>
       </li>
     </ul>
 
     <div class="sidebar-footer">
-      <button class="nav-item logout-btn" @click="logout">
-        <i class="pi pi-sign-out"></i>
-        <span>{{ t.nav.logout }}</span>
+      <button
+        class="nav-item toggle-btn"
+        @click="layout.toggleSidebar()"
+        :title="layout.collapsed ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen'"
+      >
+        <i :class="layout.collapsed ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'"></i>
+        <span v-show="!layout.collapsed">Einklappen</span>
       </button>
+      <button class="nav-item logout-btn" @click="logout" :title="layout.collapsed ? t.nav.logout : undefined">
+        <i class="pi pi-sign-out"></i>
+        <span v-show="!layout.collapsed">{{ t.nav.logout }}</span>
+      </button>
+      <div v-show="!layout.collapsed" class="version">v{{ __APP_VERSION__ }}</div>
     </div>
   </nav>
 </template>
+
+<script lang="ts">
+declare const __APP_VERSION__: string
+</script>
 
 <style scoped>
 .sidebar {
@@ -67,22 +83,33 @@ function logout() {
   display: flex;
   flex-direction: column;
   z-index: 100;
+  transition: width 0.2s ease;
+  overflow: hidden;
 }
 
 .logo {
-  padding: 1.25rem;
+  padding: 0 1.25rem;
+  height: 56px;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   font-size: 1.2rem;
   font-weight: 700;
   border-bottom: 1px solid #334155;
+  white-space: nowrap;
+}
+
+.sidebar.collapsed .logo {
+  justify-content: center;
+  padding: 0;
 }
 
 .nav-list {
   list-style: none;
   padding: 0.5rem;
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .nav-item {
@@ -99,6 +126,12 @@ function logout() {
   width: 100%;
   font-size: 0.95rem;
   text-align: left;
+  white-space: nowrap;
+}
+
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 0.75rem;
 }
 
 .nav-item:hover {
@@ -116,6 +149,15 @@ function logout() {
   border-top: 1px solid #334155;
 }
 
+.toggle-btn {
+  color: #64748b;
+}
+
+.toggle-btn:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
 .logout-btn {
   color: #f87171;
 }
@@ -123,5 +165,12 @@ function logout() {
 .logout-btn:hover {
   background: #451a1a;
   color: #fca5a5;
+}
+
+.version {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #475569;
+  padding: 0.25rem 0;
 }
 </style>

@@ -27,6 +27,7 @@ import TopBar from './TopBar.vue'
   margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
+  transition: margin-left 0.2s ease;
 }
 
 .content {

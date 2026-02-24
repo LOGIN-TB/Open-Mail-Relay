@@ -4,6 +4,20 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.0.4] - 2026-02-24
+
+### Hinzugefuegt
+- **Einklappbare Seitenleiste** - Toggle-Button am unteren Rand klappt die Sidebar ein (72px, nur Icons) und aus (260px, Icons + Labels)
+- Smooth CSS-Transition (0.2s) fuer Sidebar und Content-Bereich
+- Sidebar-Zustand wird in localStorage gespeichert und bleibt nach Seitenreload erhalten
+- **Versionsnummer** im Sidebar-Footer (ausgeklappt sichtbar)
+- Neuer Pinia Store `layout.ts` fuer Sidebar-State-Management
+- `__APP_VERSION__` Build-Konstante aus `package.json` via Vite Define
+
+### Geaendert
+- **RetentionSettings verschoben** von Protokoll-Seite in die Konfiguration-Seite (thematisch passender)
+- Retention-Label von "Aufbewahrung" zu "Protokoll-Aufbewahrung" praezisiert
+
 ## [1.0.3] - 2026-02-24
 
 ### Geaendert

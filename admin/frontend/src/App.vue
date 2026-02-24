@@ -1,7 +1,18 @@
 <script setup lang="ts">
+import { watch } from 'vue'
 import { RouterView } from 'vue-router'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
+import { useLayoutStore } from './stores/layout'
+
+const layout = useLayoutStore()
+
+function applySidebarWidth() {
+  document.documentElement.style.setProperty('--sidebar-width', layout.sidebarWidth)
+}
+
+applySidebarWidth()
+watch(() => layout.sidebarWidth, applySidebarWidth)
 </script>
 
 <template>
