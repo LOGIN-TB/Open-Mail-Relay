@@ -22,6 +22,8 @@ function isActive(path: string) {
   return route.path.startsWith(path)
 }
 
+const appVersion = __APP_VERSION__
+
 function logout() {
   auth.logout()
   router.push({ name: 'login' })
@@ -62,14 +64,10 @@ function logout() {
         <i class="pi pi-sign-out"></i>
         <span v-show="!layout.collapsed">{{ t.nav.logout }}</span>
       </button>
-      <div v-show="!layout.collapsed" class="version">v{{ __APP_VERSION__ }}</div>
+      <div v-show="!layout.collapsed" class="version">v{{ appVersion }}</div>
     </div>
   </nav>
 </template>
-
-<script lang="ts">
-declare const __APP_VERSION__: string
-</script>
 
 <style scoped>
 .sidebar {
