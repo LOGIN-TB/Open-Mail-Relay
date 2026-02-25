@@ -166,8 +166,8 @@ class SmtpUserCreate(BaseModel):
     @classmethod
     def validate_username(cls, v: str) -> str:
         v = v.strip().lower()
-        if not re.match(r"^[a-z0-9]{4,16}$", v):
-            raise ValueError("Benutzername muss 4-16 Zeichen lang sein (nur Kleinbuchstaben und Ziffern)")
+        if not re.match(r"^[a-z0-9_-]{4,16}$", v):
+            raise ValueError("Benutzername muss 4-16 Zeichen lang sein (Buchstaben, Ziffern, - und _)")
         return v
 
 

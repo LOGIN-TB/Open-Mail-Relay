@@ -137,7 +137,7 @@ export default {
     addUser: 'SMTP-Benutzer anlegen',
     username: 'Benutzername',
     usernamePlaceholder: 'z.B. mailuser1',
-    usernameHint: '4-16 Zeichen, nur Kleinbuchstaben und Ziffern',
+    usernameHint: '4-16 Zeichen: Buchstaben, Ziffern, Bindestrich und Unterstrich (Groß/Klein egal)',
     password: 'Passwort',
     status: 'Status',
     active: 'Aktiv',

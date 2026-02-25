@@ -130,7 +130,7 @@ Aenderungen werden sofort wirksam - Postfix laedt die neue `mynetworks`-Datei au
 Neben der IP-basierten Autorisierung koennen SMTP-Benutzer angelegt werden, die sich per Benutzername/Passwort authentifizieren. Das ist besonders nuetzlich, wenn Clients von wechselnden IPs senden muessen.
 
 1. Im Admin-Panel unter **SMTP-Benutzer** → **SMTP-Benutzer anlegen**
-2. Benutzernamen eingeben (4-16 Zeichen, Kleinbuchstaben und Ziffern)
+2. Benutzernamen eingeben (4-16 Zeichen: Buchstaben, Ziffern, Bindestrich und Unterstrich; Gross/Kleinschreibung egal)
 3. Das Passwort wird automatisch generiert und angezeigt
 4. **PDF-Konfigurationsblatt herunterladen** mit allen Zugangsdaten und Einrichtungsanleitung
 

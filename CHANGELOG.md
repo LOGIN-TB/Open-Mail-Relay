@@ -4,6 +4,13 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.2.0] - 2026-02-25
+
+### Geaendert
+- **Erweiterte SMTP-Benutzernamen** - Neben Kleinbuchstaben und Ziffern sind jetzt auch Grossbuchstaben, Bindestriche (`-`) und Unterstriche (`_`) erlaubt (4-16 Zeichen). Benutzernamen werden intern lowercase gespeichert.
+- **Case-insensitive SMTP-Anmeldung** - Dovecot normalisiert den Login-Benutzernamen automatisch zu Kleinbuchstaben (`auth_username_format = %Lu`). Ob der Client `MailUser`, `MAILUSER` oder `mailuser` sendet, ist egal.
+- Hinweistext im Frontend und SETUP-Dokumentation aktualisiert
+
 ## [1.1.2] - 2026-02-24
 
 ### Behoben
