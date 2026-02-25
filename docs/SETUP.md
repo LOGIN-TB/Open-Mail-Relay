@@ -134,7 +134,7 @@ Neben der IP-basierten Autorisierung koennen SMTP-Benutzer angelegt werden, die 
 3. Das Passwort wird automatisch generiert und angezeigt
 4. **PDF-Konfigurationsblatt herunterladen** mit allen Zugangsdaten und Einrichtungsanleitung
 
-> **Sicherheit:** SMTP-Auth wird nur ueber TLS angeboten (`smtpd_tls_auth_only = yes`). Passwort-Uebertragung im Klartext ist ausgeschlossen.
+> **Hinweis:** Auf Port 587 ist TLS Pflicht - Zugangsdaten werden immer verschluesselt uebertragen. Auf Port 25 ist SMTP-Auth auch ohne TLS moeglich, damit aeltere Geraete ohne TLS-Unterstuetzung den Relay nutzen koennen. Empfehlung: Port 587 verwenden, wenn moeglich.
 
 ## 7. Sendenden Server konfigurieren
 
@@ -154,11 +154,11 @@ Auf dem Server, der Mails ueber das Relay versenden soll, die SMTP-Einstellungen
 | Einstellung | Wert |
 |-------------|------|
 | SMTP-Server | `relay.example.com` |
-| Port | `587` (Submission) |
+| Port | `587` (empfohlen, TLS Pflicht) oder `25` (TLS optional, fuer Legacy-Geraete) |
 | Authentifizierung | PLAIN oder LOGIN |
 | Benutzername | (aus Admin-Panel / PDF) |
 | Passwort | (aus Admin-Panel / PDF) |
-| Verschluesselung | STARTTLS (Pflicht) |
+| Verschluesselung | STARTTLS (Pflicht bei Port 587, optional bei Port 25) |
 
 > **Hinweis:** Alle ausgehenden Mails vom Relay zum Ziel-Mailserver werden immer TLS-verschluesselt (mindestens TLS 1.2). Mails an Server ohne TLS werden nicht zugestellt.
 
@@ -245,7 +245,7 @@ swaks --to empfaenger@zieldomain.de \
       --tls
 ```
 
-### Test mit SMTP-Auth (SASL)
+### Test mit SMTP-Auth (SASL) ueber Port 587
 
 ```bash
 swaks --to empfaenger@zieldomain.de \
@@ -253,6 +253,18 @@ swaks --to empfaenger@zieldomain.de \
       --server relay.example.com \
       --port 587 \
       --tls \
+      --auth PLAIN \
+      --auth-user smtpuser \
+      --auth-password xxxx-xxxxxx-xxxx
+```
+
+### Test mit SMTP-Auth (SASL) ueber Port 25 ohne TLS (Legacy)
+
+```bash
+swaks --to empfaenger@zieldomain.de \
+      --from absender@example.com \
+      --server relay.example.com \
+      --port 25 \
       --auth PLAIN \
       --auth-user smtpuser \
       --auth-password xxxx-xxxxxx-xxxx

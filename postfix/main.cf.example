@@ -27,6 +27,8 @@ smtpd_sasl_type = dovecot
 smtpd_sasl_path = private/auth
 smtpd_sasl_security_options = noanonymous
 smtpd_tls_auth_only = yes
+# Hinweis: master.cf ueberschreibt dies fuer Port 25 mit smtpd_tls_auth_only=no
+# Damit ist SMTP-Auth auf Port 25 auch ohne TLS moeglich (Legacy-Geraete)
 
 # TLS ausgehend (erzwungen)
 smtp_tls_security_level = encrypt

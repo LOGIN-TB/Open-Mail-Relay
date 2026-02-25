@@ -4,6 +4,13 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.2.1] - 2026-02-25
+
+### Geaendert
+- **SMTP-Auth ohne TLS auf Port 25** - SASL-Authentifizierung ist jetzt auch ohne STARTTLS auf Port 25 moeglich (`smtpd_tls_auth_only=no` per master.cf-Override). Aeltere Geraete ohne TLS-Unterstuetzung koennen sich damit per Benutzername/Passwort authentifizieren. Port 587 erzwingt weiterhin TLS.
+- PDF-Konfigurationsblatt zeigt jetzt beide Ports (587 empfohlen, 25 fuer Legacy-Geraete)
+- Dokumentation (README, SETUP.md) und Frontend-Hinweistexte aktualisiert
+
 ## [1.2.0] - 2026-02-25
 
 ### Geaendert

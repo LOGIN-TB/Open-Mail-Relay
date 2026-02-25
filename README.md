@@ -85,7 +85,7 @@ Standard-Login: `admin` / (Wert aus `ADMIN_DEFAULT_PASSWORD`)
 
 Ausgehende Verbindungen zu Ziel-Mailservern werden **immer TLS-verschluesselt** (mindestens TLS 1.2). Mails an Server ohne TLS-Unterstuetzung werden nicht zugestellt.
 
-Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (IP-basiert) **oder** fuer authentifizierte SMTP-Benutzer (SASL). SMTP-Auth wird nur ueber TLS angeboten (`smtpd_tls_auth_only = yes`).
+Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (IP-basiert) **oder** fuer authentifizierte SMTP-Benutzer (SASL). Auf Port 587 ist TLS Pflicht. Auf Port 25 ist SMTP-Auth auch ohne TLS moeglich (fuer aeltere Geraete ohne TLS-Unterstuetzung). Empfehlung: Port 587 mit TLS verwenden, wenn moeglich.
 
 ## Admin-Panel
 
@@ -198,12 +198,21 @@ swaks --to empfaenger@zieldomain.de \
       --port 587 \
       --tls
 
-# Test mit SMTP-Auth (SASL) von beliebiger IP
+# Test mit SMTP-Auth (SASL) ueber Port 587 (empfohlen)
 swaks --to empfaenger@zieldomain.de \
       --from absender@quelldomain.de \
       --server relay.example.com \
       --port 587 \
       --tls \
+      --auth PLAIN \
+      --auth-user smtpuser \
+      --auth-password xxxx-xxxxxx-xxxx
+
+# Test mit SMTP-Auth (SASL) ueber Port 25 ohne TLS (Legacy-Geraete)
+swaks --to empfaenger@zieldomain.de \
+      --from absender@quelldomain.de \
+      --server relay.example.com \
+      --port 25 \
       --auth PLAIN \
       --auth-user smtpuser \
       --auth-password xxxx-xxxxxx-xxxx

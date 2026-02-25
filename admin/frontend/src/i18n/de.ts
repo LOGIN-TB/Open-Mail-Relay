@@ -65,7 +65,7 @@ export default {
     connectionDesc: 'Diese Einstellungen auf dem sendenden Server verwenden:',
     smtpHost: 'SMTP-Server',
     ports: 'Ports',
-    portHint: 'Port 25 (SMTP) akzeptiert Mails mit optionalem STARTTLS. Port 587 (Submission) erzwingt STARTTLS und benoetigt ein gueltiges TLS-Zertifikat.',
+    portHint: 'Port 587 (Submission) erzwingt STARTTLS und benoetigt ein gueltiges TLS-Zertifikat. Port 25 (SMTP) akzeptiert Mails mit optionalem STARTTLS - SMTP-Auth ist hier auch ohne TLS moeglich (fuer aeltere Geraete).',
     portNoCert: 'Port 587 ist derzeit nicht nutzbar, da kein TLS-Zertifikat geladen ist. Bitte zuerst ein Zertifikat synchronisieren.',
     authRequired: 'Authentifizierung',
     maxSize: 'Max. Nachrichtengroesse',

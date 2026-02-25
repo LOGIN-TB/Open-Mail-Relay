@@ -73,8 +73,8 @@ def generate_config_pdf(username: str, password: str, smtp_host: str) -> bytes:
     table_data = [
         ["Einstellung", "Wert"],
         ["SMTP-Server", smtp_host],
-        ["Port", "587"],
-        ["Verschluesselung", "STARTTLS (erforderlich)"],
+        ["Port", "587 (empfohlen) oder 25 (Legacy)"],
+        ["Verschluesselung", "STARTTLS (Pflicht bei 587, optional bei 25)"],
         ["Benutzername", username],
         ["Passwort", password],
     ]
@@ -106,9 +106,10 @@ def generate_config_pdf(username: str, password: str, smtp_host: str) -> bytes:
 
     steps = [
         "1. Oeffnen Sie die SMTP-Einstellungen Ihres E-Mail-Programms oder Servers.",
-        "2. Tragen Sie als SMTP-Server <b>{}</b> mit Port <b>587</b> ein.".format(smtp_host),
+        "2. Tragen Sie als SMTP-Server <b>{}</b> mit Port <b>587</b> ein (empfohlen).".format(smtp_host),
         "3. Waehlen Sie <b>STARTTLS</b> als Verschluesselung.",
         "4. Geben Sie den Benutzernamen <b>{}</b> und das Passwort ein.".format(username),
+        "Alternativ: Fuer aeltere Geraete ohne TLS-Unterstuetzung Port <b>25</b> verwenden (Verschluesselung optional).",
     ]
 
     for step in steps:
