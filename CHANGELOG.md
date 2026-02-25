@@ -4,6 +4,39 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.3.0] - 2026-02-25
+
+### Hinzugefuegt
+- **Mail-Drosselung & IP-Warmup** - Outbound-Rate-Limiting mit automatischem Warmup-Tracking fuer neue IP-Adressen
+  - 4 Aufwaerm-Phasen (Woche 1-2, 3-4, 5-6, Etabliert) mit konfigurierbaren Limits pro Stunde/Tag
+  - Automatische Phasen-Eskalation basierend auf dem Startdatum
+  - Mails werden immer angenommen (250 OK), bei Limit-Ueberschreitung intern in HOLD-Queue gelegt
+  - Batch-Worker gibt gehaltene Mails zeitgesteuert in kontrollierten Batches frei
+- **Postfix Policy Server** (Port 9998) — Async TCP-Server im Admin-Container, prueft Rate-Limits per Postfix Policy Protocol
+- **Per-Domain Transport-Drosselung** — Separate Concurrency- und Rate-Limits fuer Gmail, Outlook, Yahoo etc.
+  - Transport-Map und master.cf werden automatisch aus der Datenbank generiert
+- **Neue Admin-Panel-Seite "Drosselung"** mit vier Bereichen:
+  - Uebersicht: Toggle aktiv/inaktiv, Warmup-Fortschrittsbalken, Echtzeit-Metriken
+  - Aufwaerm-Phasen: Tabelle mit Inline-Bearbeitung, manuelle Phase setzen, Warmup zuruecksetzen
+  - Transport-Regeln: CRUD-Tabelle fuer Per-Domain-Drosselung
+  - Einstellungen: Batch-Intervall konfigurieren
+- **Dashboard-Integration** — Warmup-Statuskarte auf dem Dashboard (nur wenn Drosselung aktiv)
+- Neue API-Endpunkte unter `/api/throttling`:
+  - `GET/PUT /config` — Drosselungs-Einstellungen
+  - `GET /warmup` — Warmup-Status
+  - `PUT /warmup/phase` — Phase manuell setzen
+  - `PUT /warmup/reset` — Warmup zuruecksetzen
+  - `GET/PUT /warmup/phases` — Phasen-Definitionen verwalten
+  - `GET/POST/PUT/DELETE /transports` — Transport-Regeln CRUD
+  - `GET /metrics` — Echtzeit-Metriken (gesendet/gehalten/Limits)
+- Alembic-Migration 004 fuer `throttle_config`, `transport_rules`, `warmup_phases` mit Default-Daten
+- Navigation: Neuer Eintrag "Drosselung" mit Gauge-Icon
+- Fail-Open-Design: Policy Server gibt bei Fehler/Timeout immer DUNNO zurueck
+
+### Geaendert
+- `smtpd_client_connection_rate_limit` von 100 auf 500 erhoeht (Inbound-Akzeptanz)
+- `scripts/entrypoint.sh` — Transport-Map und Policy-Service Konfiguration beim Container-Start
+
 ## [1.2.1] - 2026-02-25
 
 ### Geaendert

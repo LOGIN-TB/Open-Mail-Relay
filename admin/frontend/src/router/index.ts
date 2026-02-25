@@ -35,6 +35,11 @@ const router = createRouter({
           component: () => import('../views/SmtpBenutzerView.vue'),
         },
         {
+          path: 'drosselung',
+          name: 'throttling',
+          component: () => import('../views/DrosselungView.vue'),
+        },
+        {
           path: 'konfiguration',
           name: 'config',
           component: () => import('../views/KonfigurationView.vue'),

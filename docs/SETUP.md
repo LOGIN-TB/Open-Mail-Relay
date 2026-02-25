@@ -136,7 +136,55 @@ Neben der IP-basierten Autorisierung koennen SMTP-Benutzer angelegt werden, die 
 
 > **Hinweis:** Auf Port 587 ist TLS Pflicht - Zugangsdaten werden immer verschluesselt uebertragen. Auf Port 25 ist SMTP-Auth auch ohne TLS moeglich, damit aeltere Geraete ohne TLS-Unterstuetzung den Relay nutzen koennen. Empfehlung: Port 587 verwenden, wenn moeglich.
 
-## 7. Sendenden Server konfigurieren
+## 7. Mail-Drosselung & IP-Warmup einrichten (empfohlen)
+
+Bei neuen Server-IPs ohne bestehende Reputation ist es wichtig, das Sendevolumen langsam zu steigern. Das Open-Mail-Relay bietet dafuer ein integriertes Drosselungs- und Warmup-System.
+
+### Funktionsweise
+
+- Mails werden **immer** angenommen (250 OK), aber bei Ueberschreitung der Limits intern in eine HOLD-Queue gelegt
+- Ein **Batch-Worker** gibt gehaltene Mails zeitgesteuert frei (Standard: alle 10 Minuten)
+- Das System durchlaeuft 4 Phasen mit steigenden Limits:
+
+| Phase | Zeitraum | Max/Stunde | Max/Tag | Burst |
+|-------|----------|-----------|---------|-------|
+| 1 — Woche 1-2 | Tag 1-14 | 20 | 500 | 10 |
+| 2 — Woche 3-4 | Tag 15-28 | 50 | 2.000 | 25 |
+| 3 — Woche 5-6 | Tag 29-42 | 100 | 5.000 | 50 |
+| 4 — Etabliert | ab Tag 43 | 500 | 50.000 | 200 |
+
+Zusaetzlich wird der Versand an grosse Provider gedrosselt (Per-Domain Transport-Regeln):
+
+| Provider | Max. Verbindungen | Verzoegerung |
+|----------|-------------------|-------------|
+| Gmail | 3 | 3s |
+| Outlook/Hotmail/Live | 2 | 5s |
+| Yahoo | 3 | 3s |
+| Standard | 5 | 1s |
+
+### Aktivierung
+
+1. Im Admin-Panel unter **Drosselung** den Toggle auf **Aktiv** setzen
+2. Das System konfiguriert automatisch Transport-Maps, Policy-Server und Postfix
+3. Der Warmup startet sofort mit Phase 1
+
+### Anpassungen
+
+- **Phasen-Limits** koennen individuell angepasst werden (Inline-Bearbeitung in der Tabelle)
+- **Transport-Regeln** koennen hinzugefuegt, bearbeitet oder geloescht werden
+- **Batch-Intervall** ist konfigurierbar (Standard: 10 Minuten)
+- **Phase manuell setzen** oder **Warmup zuruecksetzen** bei Bedarf
+
+### Dashboard
+
+Wenn die Drosselung aktiv ist, zeigt das Dashboard eine Warmup-Statuskarte mit Phasenname, Fortschrittsbalken und der Anzahl zurueckgehaltener Mails.
+
+### Sicherheit
+
+- **Fail-Open-Design**: Der Policy-Server gibt bei Fehler oder Timeout immer DUNNO zurueck — Mails werden nie durch einen Bug blockiert
+- Bei Deaktivierung der Drosselung werden alle gehaltenen Mails sofort freigegeben
+
+## 8. Sendenden Server konfigurieren
 
 Auf dem Server, der Mails ueber das Relay versenden soll, die SMTP-Einstellungen konfigurieren:
 
@@ -218,7 +266,7 @@ Datei `/etc/postfix/sasl_passwd`:
 
 Danach: `postmap /etc/postfix/sasl_passwd && chmod 600 /etc/postfix/sasl_passwd*`
 
-## 8. Testen
+## 9. Testen
 
 ### swaks installieren
 
@@ -369,6 +417,7 @@ docker compose logs -f
 | Postfix-Konfiguration (`postfix/main.cf`) | Lokale Datei (gitignored) | Ja |
 | Netzwerk-Whitelist (`postfix/mynetworks`) | Lokale Datei (gitignored) | Ja |
 | SMTP-Benutzer (Passwoerter verschluesselt) | Docker Volume `admin-data` (SQLite) | Ja |
+| Drosselungs-Konfiguration (Phasen, Transports) | Docker Volume `admin-data` (SQLite) | Ja |
 | Dovecot passwd-Datei (`postfix/dovecot-users`) | Lokale Datei (gitignored) | Wird aus DB regeneriert |
 | Umgebungsvariablen (`.env`) | Lokale Datei (gitignored) | Ja |
 

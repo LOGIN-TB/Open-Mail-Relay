@@ -5,6 +5,7 @@ import StatsCards from '../components/dashboard/StatsCards.vue'
 import DeliveryChart from '../components/dashboard/DeliveryChart.vue'
 import QueueStatus from '../components/dashboard/QueueStatus.vue'
 import RecentActivity from '../components/dashboard/RecentActivity.vue'
+import WarmupStatusCard from '../components/dashboard/WarmupStatusCard.vue'
 import t from '../i18n/de'
 
 const dashboard = useDashboardStore()
@@ -24,6 +25,8 @@ onUnmounted(() => {
 <template>
   <div class="dashboard">
     <h2>{{ t.dashboard.title }}</h2>
+
+    <WarmupStatusCard />
 
     <StatsCards :stats="dashboard.stats" :loading="dashboard.loading" />
 

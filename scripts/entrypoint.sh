@@ -38,6 +38,25 @@ if ! echo "$CURRENT_RESTRICTIONS" | grep -q "permit_sasl_authenticated"; then
     postconf -e "smtpd_relay_restrictions = permit_mynetworks, permit_sasl_authenticated, reject"
 fi
 
+# Transport map fuer gedrosselte Zustellung
+if [ -f /etc/postfix-config/transport ]; then
+    cp /etc/postfix-config/transport /etc/postfix/transport
+    postmap /etc/postfix/transport
+    postconf -e "transport_maps = hash:/etc/postfix/transport"
+    echo "Transport map loaded"
+fi
+
+# Policy-Service fuer Rate-Limiting (HOLD-Mechanismus)
+if [ -f /etc/postfix-config/throttle_enabled ]; then
+    postconf -e "smtpd_end_of_data_restrictions = check_policy_service inet:admin-panel:9998"
+    postconf -e "smtpd_policy_service_default_action = DUNNO"
+    postconf -e "smtpd_policy_service_timeout = 5"
+    echo "Throttle policy service configured"
+fi
+
+# Erhoehte Inbound-Limits (Outbound wird gedrosselt)
+postconf -e "smtpd_client_connection_rate_limit = 500"
+
 # Dovecot starten (Auth-Only Modus)
 echo "Starting Dovecot (auth-only)..."
 dovecot

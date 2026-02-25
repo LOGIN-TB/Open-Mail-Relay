@@ -11,6 +11,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
 - **Automatisches TLS** - Caddy beschafft und erneuert Let's Encrypt-Zertifikate automatisch. Synchronisierung nach Postfix alle 6 Stunden
 - **IP-basierte Autorisierung** - Relay nur fuer konfigurierte Netzwerke (CIDR), verwaltbar ueber das Admin-Panel
 - **SMTP-Benutzer-Authentifizierung (SASL)** - Zusaetzlich zur IP-Whitelist koennen SMTP-Benutzer mit Benutzername/Passwort von beliebigen IPs relayen. Dovecot-basiertes SASL, verwaltbar ueber das Admin-Panel inkl. PDF-Konfigurationsblatt
+- **Mail-Drosselung & IP-Warmup** - Outbound-Rate-Limiting mit automatischem 4-Phasen-Warmup fuer neue IPs. Per-Domain Transport-Drosselung (Gmail, Outlook, Yahoo etc.) und konfigurierbarer Batch-Worker fuer kontrollierte Zustellung
 - **Echtzeit-Monitoring** - Dashboard mit Zustellstatistiken, Queue-Status, Aktivitaetslog und Verlaufsdiagramm
 - **Einklappbare Seitenleiste** - Sidebar per Toggle-Button ein-/ausklappbar, Zustand wird gespeichert
 - **Docker-basiert** - Drei Container (Caddy, Admin-Panel, Open-Mail-Relay), einfach zu deployen
@@ -35,6 +36,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
                     │      ├── Dashboard & Statistiken        │
                     │      ├── Netzwerk-/IP-Verwaltung        │
                     │      ├── SMTP-Benutzerverwaltung        │
+                    │      ├── Mail-Drosselung & IP-Warmup    │
                     │      ├── TLS-Zertifikat-Status          │
                     │      └── Benutzer- & Konfiguration      │
                     └─────────────────────────────────────────┘
@@ -116,6 +118,17 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - **PDF-Konfigurationsblatt** mit Zugangsdaten und Einrichtungsanleitung zum Herunterladen
 - Fernet-verschluesselte Passwoerter in der Datenbank
 - Automatische Synchronisierung mit Dovecot (SASL-Backend)
+
+### Mail-Drosselung & IP-Warmup
+- **Outbound-Rate-Limiting** mit automatischem 4-Phasen-Warmup (Woche 1-2, 3-4, 5-6, Etabliert)
+- Mails werden immer angenommen (250 OK), bei Limit-Ueberschreitung intern in HOLD-Queue gelegt
+- **Per-Domain Transport-Drosselung** fuer Gmail, Outlook, Yahoo etc. (Concurrency + Rate-Delay)
+- **Batch-Worker** gibt gehaltene Mails zeitgesteuert in kontrollierten Batches frei
+- Warmup-Fortschrittsanzeige und Echtzeit-Metriken (gesendet/Stunde, gesendet/Tag, zurueckgehalten)
+- Alle Limits pro Phase konfigurierbar (Max/Stunde, Max/Tag, Burst)
+- Transport-Regeln mit CRUD-Verwaltung
+- Fail-Open-Design: Bei Fehler wird Mail nie blockiert
+- Warmup-Status auch auf dem Dashboard sichtbar
 
 ### Benutzerverwaltung
 - Admin-Benutzer anlegen, bearbeiten, loeschen

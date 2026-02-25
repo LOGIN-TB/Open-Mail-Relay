@@ -200,3 +200,105 @@ class AuditLogOut(BaseModel):
     ip_address: str | None
 
     model_config = {"from_attributes": True}
+
+
+# --- Throttling ---
+
+class ThrottleConfigOut(BaseModel):
+    enabled: bool = False
+    warmup_start_date: str = ""
+    batch_interval_minutes: int = 10
+
+
+class ThrottleConfigUpdate(BaseModel):
+    enabled: bool | None = None
+    batch_interval_minutes: int | None = None
+
+
+class TransportRuleOut(BaseModel):
+    id: int
+    domain_pattern: str
+    transport_name: str
+    concurrency_limit: int
+    rate_delay_seconds: int
+    is_active: bool
+    description: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class TransportRuleCreate(BaseModel):
+    domain_pattern: str
+    transport_name: str
+    concurrency_limit: int = 5
+    rate_delay_seconds: int = 1
+    is_active: bool = True
+    description: str | None = None
+
+    @field_validator("domain_pattern")
+    @classmethod
+    def validate_domain(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not v:
+            raise ValueError("Domain-Pattern darf nicht leer sein")
+        return v
+
+    @field_validator("transport_name")
+    @classmethod
+    def validate_transport(cls, v: str) -> str:
+        v = v.strip()
+        if not re.match(r"^[a-z0-9_]+$", v):
+            raise ValueError("Transport-Name darf nur Kleinbuchstaben, Ziffern und Unterstriche enthalten")
+        return v
+
+
+class TransportRuleUpdate(BaseModel):
+    domain_pattern: str | None = None
+    transport_name: str | None = None
+    concurrency_limit: int | None = None
+    rate_delay_seconds: int | None = None
+    is_active: bool | None = None
+    description: str | None = None
+
+
+class WarmupPhaseOut(BaseModel):
+    id: int
+    phase_number: int
+    name: str
+    duration_days: int
+    max_per_hour: int
+    max_per_day: int
+    burst_limit: int
+
+    model_config = {"from_attributes": True}
+
+
+class WarmupPhaseUpdate(BaseModel):
+    name: str | None = None
+    duration_days: int | None = None
+    max_per_hour: int | None = None
+    max_per_day: int | None = None
+    burst_limit: int | None = None
+
+
+class WarmupLimits(BaseModel):
+    max_per_hour: int
+    max_per_day: int
+    burst_limit: int
+
+
+class WarmupStatus(BaseModel):
+    current_phase: int
+    phase_name: str
+    days_elapsed: int
+    days_remaining: int
+    percent_complete: float
+    limits: WarmupLimits
+    is_established: bool
+
+
+class ThrottleMetrics(BaseModel):
+    sent_today: int = 0
+    sent_this_hour: int = 0
+    held_count: int = 0
+    limits: WarmupLimits | None = None
