@@ -88,7 +88,7 @@ def export_events(
                      "Client-IP", "SASL-Benutzer"])
     for e in events:
         writer.writerow([
-            e.timestamp.isoformat() if e.timestamp else "",
+            e.timestamp.isoformat() + "Z" if e.timestamp else "",
             e.status, e.queue_id or "", e.sender or "", e.recipient or "",
             e.relay or "", e.delay or "", e.dsn or "", e.size or "", e.message or "",
             e.client_ip or "", e.sasl_username or "",

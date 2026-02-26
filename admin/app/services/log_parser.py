@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass
 
 
@@ -70,7 +70,7 @@ def parse_timestamp(line: str) -> datetime | None:
     m = DOCKER_TS_RE.match(line)
     if m:
         try:
-            return datetime.fromisoformat(m.group(1))
+            return datetime.fromisoformat(m.group(1)).replace(tzinfo=timezone.utc)
         except ValueError:
             pass
 
@@ -79,7 +79,7 @@ def parse_timestamp(line: str) -> datetime | None:
     if m:
         try:
             ts = datetime.strptime(m.group(1), "%b %d %H:%M:%S")
-            return ts.replace(year=datetime.now().year)
+            return ts.replace(year=datetime.now().year, tzinfo=timezone.utc)
         except ValueError:
             pass
 
@@ -87,7 +87,7 @@ def parse_timestamp(line: str) -> datetime | None:
 
 
 def parse_log_line(line: str) -> ParsedMailEvent | None:
-    ts = parse_timestamp(line) or datetime.now()
+    ts = parse_timestamp(line) or datetime.now(timezone.utc)
 
     # Check for reject
     m = REJECT_RE.search(line)

@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, field_validator
 import ipaddress
@@ -139,6 +139,13 @@ class MailEventOut(BaseModel):
     sasl_username: str | None = None
 
     model_config = {"from_attributes": True}
+
+    @field_validator("timestamp", mode="before")
+    @classmethod
+    def ensure_utc(cls, v: datetime) -> datetime:
+        if isinstance(v, datetime) and v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v
 
 
 class ChartData(BaseModel):
