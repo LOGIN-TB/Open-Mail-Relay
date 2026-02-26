@@ -256,6 +256,7 @@ export default {
     banUpdated: 'IP-Sperre aktualisiert',
     banDeleted: 'Eintrag geloescht',
     unbanned: 'IP-Sperre aufgehoben',
+    banned: 'Gesperrt',
     noBans: 'Keine IP-Sperren vorhanden',
     settings: 'Schwellenwerte',
     maxAttempts: 'Max. Fehlversuche',

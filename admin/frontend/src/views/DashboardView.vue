@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useDashboardStore } from '../stores/dashboard'
+import api from '../api/client'
 import StatsCards from '../components/dashboard/StatsCards.vue'
 import DeliveryChart from '../components/dashboard/DeliveryChart.vue'
 import QueueStatus from '../components/dashboard/QueueStatus.vue'
@@ -9,12 +10,26 @@ import WarmupStatusCard from '../components/dashboard/WarmupStatusCard.vue'
 import t from '../i18n/de'
 
 const dashboard = useDashboardStore()
+const bannedIps = ref<Set<string>>(new Set())
+
+async function fetchBannedIps() {
+  try {
+    const { data } = await api.get('/ip-bans')
+    bannedIps.value = new Set(data.filter((b: any) => b.is_active).map((b: any) => b.ip_address))
+  } catch {
+    // ignore – badge simply won't show
+  }
+}
 
 let refreshInterval: ReturnType<typeof setInterval>
 
 onMounted(() => {
   dashboard.fetchAll()
-  refreshInterval = setInterval(() => dashboard.fetchAll(), 30000)
+  fetchBannedIps()
+  refreshInterval = setInterval(() => {
+    dashboard.fetchAll()
+    fetchBannedIps()
+  }, 30000)
 })
 
 onUnmounted(() => {
@@ -39,7 +54,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <RecentActivity :events="dashboard.activity" />
+    <RecentActivity :events="dashboard.activity" :banned-ips="bannedIps" />
   </div>
 </template>
 

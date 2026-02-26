@@ -4,6 +4,16 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.4.1] - 2026-02-26
+
+### Hinzugefuegt
+- **"Gesperrt"-Badge in Dashboard und Protokoll** - Events von aktuell gesperrten IPs werden mit einem dunkelroten "Gesperrt"-Badge (mit Ban-Icon) neben dem Quellen-Badge markiert
+  - Dashboard (Letzte Aktivitaet): Badge erscheint neben der Client-IP wenn diese auf der Sperrliste steht
+  - Protokoll (Ereignis-Tabelle): Gleiches Badge in der Quellen-Spalte
+  - Aktive Sperren werden per `GET /api/ip-bans` geladen (Dashboard: Auto-Refresh alle 30s)
+  - Badge verschwindet automatisch nach Entsperrung (bei Seiten-Refresh)
+- Neuer i18n-Key `ipBans.banned` fuer "Gesperrt"-Label
+
 ## [1.4.0] - 2026-02-26
 
 ### Hinzugefuegt

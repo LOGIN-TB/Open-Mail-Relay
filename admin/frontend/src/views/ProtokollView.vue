@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useProtokollStore } from '../stores/protokoll'
+import api from '../api/client'
 import EventFilters from '../components/protokoll/EventFilters.vue'
 import EventTable from '../components/protokoll/EventTable.vue'
 import LiveLogPanel from '../components/protokoll/LiveLogPanel.vue'
@@ -8,9 +9,20 @@ import t from '../i18n/de'
 
 const store = useProtokollStore()
 const activeTab = ref<'events' | 'live'>('events')
+const bannedIps = ref<Set<string>>(new Set())
+
+async function fetchBannedIps() {
+  try {
+    const { data } = await api.get('/ip-bans')
+    bannedIps.value = new Set(data.filter((b: any) => b.is_active).map((b: any) => b.ip_address))
+  } catch {
+    // ignore
+  }
+}
 
 onMounted(() => {
   store.fetchEvents()
+  fetchBannedIps()
 })
 </script>
 
@@ -37,7 +49,7 @@ onMounted(() => {
 
     <template v-if="activeTab === 'events'">
       <EventFilters />
-      <EventTable />
+      <EventTable :banned-ips="bannedIps" />
     </template>
 
     <template v-if="activeTab === 'live'">

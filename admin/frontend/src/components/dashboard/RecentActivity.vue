@@ -19,6 +19,7 @@ defineProps<{
     client_ip: string | null
     sasl_username: string | null
   }[]
+  bannedIps?: Set<string>
 }>()
 
 const expandedId = ref<number | null>(null)
@@ -93,6 +94,9 @@ function sourceDisplay(event: { sasl_username: string | null; client_ip: string 
                 {{ sourceDisplay(event).text }}
               </span>
               <span v-else>-</span>
+              <span v-if="event.client_ip && bannedIps?.has(event.client_ip)" class="source-badge source-banned">
+                <i class="pi pi-ban"></i> {{ t.ipBans.banned }}
+              </span>
             </td>
             <td class="truncate">{{ event.sender ?? '-' }}</td>
             <td class="truncate">{{ event.recipient ?? '-' }}</td>
@@ -242,6 +246,11 @@ function sourceDisplay(event: { sasl_username: string | null; client_ip: string 
 .source-rejected {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.source-banned {
+  background: #7f1d1d;
+  color: #fecaca;
 }
 
 /* Detail row */
