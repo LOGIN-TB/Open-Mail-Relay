@@ -18,13 +18,13 @@ const emit = defineEmits<{
   save: [settings: BanSettingsData]
 }>()
 
-const maxAttempts = ref(props.settings.max_attempts)
-const timeWindow = ref(props.settings.time_window_minutes)
+const maxAttempts = ref(String(props.settings.max_attempts))
+const timeWindow = ref(String(props.settings.time_window_minutes))
 const durationsText = ref(props.settings.ban_durations.join(', '))
 
 watch(() => props.settings, (s) => {
-  maxAttempts.value = s.max_attempts
-  timeWindow.value = s.time_window_minutes
+  maxAttempts.value = String(s.max_attempts)
+  timeWindow.value = String(s.time_window_minutes)
   durationsText.value = s.ban_durations.join(', ')
 })
 
@@ -35,8 +35,8 @@ function save() {
     .filter((n) => !isNaN(n) && n > 0)
 
   emit('save', {
-    max_attempts: maxAttempts.value,
-    time_window_minutes: timeWindow.value,
+    max_attempts: parseInt(maxAttempts.value, 10) || 5,
+    time_window_minutes: parseInt(timeWindow.value, 10) || 10,
     ban_durations: durations,
   })
 }
@@ -49,11 +49,11 @@ function save() {
       <div class="field-row">
         <div class="field">
           <label>{{ t.ipBans.maxAttempts }}</label>
-          <InputText v-model.number="maxAttempts" type="number" min="1" class="w-full" />
+          <InputText v-model="maxAttempts" type="number" min="1" class="w-full" />
         </div>
         <div class="field">
           <label>{{ t.ipBans.timeWindow }}</label>
-          <InputText v-model.number="timeWindow" type="number" min="1" class="w-full" />
+          <InputText v-model="timeWindow" type="number" min="1" class="w-full" />
         </div>
       </div>
       <div class="field">
