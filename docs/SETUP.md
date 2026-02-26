@@ -63,6 +63,10 @@ ADMIN_DEFAULT_PASSWORD=ein-sicheres-passwort
 
 # E-Mail fuer Let's Encrypt (Ablaufwarnungen)
 LETSENCRYPT_EMAIL=admin@example.com
+
+# Zeitzone fuer Container-Logs (Postfix, Caddy)
+# Die Zeitzone fuer das Admin-Panel wird separat im Panel unter Konfiguration eingestellt
+TZ=Europe/Berlin
 ```
 
 > **Tipp:** Sicheren Secret Key generieren: `openssl rand -hex 32`
@@ -419,6 +423,7 @@ docker compose logs -f
 | Netzwerk-Whitelist (`postfix/mynetworks`) | Lokale Datei (gitignored) | Ja |
 | SMTP-Benutzer (Passwoerter verschluesselt) | Docker Volume `admin-data` (SQLite) | Ja |
 | Drosselungs-Konfiguration (Phasen, Transports) | Docker Volume `admin-data` (SQLite) | Ja |
+| Zeitzonen-Einstellung | Docker Volume `admin-data` (SQLite) | Ja |
 | Dovecot passwd-Datei (`postfix/dovecot-users`) | Lokale Datei (gitignored) | Wird aus DB regeneriert |
 | Umgebungsvariablen (`.env`) | Lokale Datei (gitignored) | Ja |
 

@@ -157,6 +157,14 @@ class RetentionUpdate(BaseModel):
     stats_retention_days: int | None = None
 
 
+class TimezoneSettings(BaseModel):
+    timezone: str
+
+
+class TimezoneUpdate(BaseModel):
+    timezone: str
+
+
 # --- SMTP Users ---
 
 class SmtpUserCreate(BaseModel):

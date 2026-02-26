@@ -1,7 +1,15 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import SideNav from './SideNav.vue'
 import TopBar from './TopBar.vue'
+import { useSettingsStore } from '../../stores/settings'
+
+const settingsStore = useSettingsStore()
+
+onMounted(() => {
+  settingsStore.fetchTimezone()
+})
 </script>
 
 <template>

@@ -4,6 +4,24 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.3.2] - 2026-02-26
+
+### Hinzugefuegt
+- **Konfigurierbare Zeitzone** - Zeitzone fuer die Anzeige aller Zeitstempel im Admin-Panel einstellbar
+  - Neue Karte "Zeitzone" auf der Konfigurationsseite mit Dropdown (27 gaengige Zeitzonen)
+  - Intern wird alles in UTC gespeichert, die Zeitzone wird nur bei der Anzeige angewendet
+  - Alle Zeitstempel im Panel (Dashboard, Protokoll, Benutzer, SMTP-Benutzer, TLS) nutzen die zentrale Zeitzone
+  - Standard: `Europe/Berlin`
+- API-Endpunkte: `GET /api/config/timezone`, `PUT /api/config/timezone`
+- Pinia Store `settings.ts` fuer globale Einstellungen (Zeitzone)
+- Zentrale Datums-Formatierungsfunktionen in `utils/dateFormat.ts`
+- `TZ` Umgebungsvariable fuer Container-Zeitzone (Postfix-Logs, Caddy-Logs)
+
+### Geaendert
+- Alle 5 Komponenten mit lokaler Datumsformatierung auf zentrale Utility-Funktionen umgestellt
+- `docker-compose.yml`: `TZ` Umgebungsvariable fuer `caddy` und `open-mail-relay` Container
+- `.env.example`: `TZ=Europe/Berlin` hinzugefuegt
+
 ## [1.3.1] - 2026-02-26
 
 ### Hinzugefuegt

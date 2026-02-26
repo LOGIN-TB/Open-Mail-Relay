@@ -13,6 +13,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
 - **SMTP-Benutzer-Authentifizierung (SASL)** - Zusaetzlich zur IP-Whitelist koennen SMTP-Benutzer mit Benutzername/Passwort von beliebigen IPs relayen. Dovecot-basiertes SASL, verwaltbar ueber das Admin-Panel inkl. PDF-Konfigurationsblatt
 - **Mail-Drosselung & IP-Warmup** - Outbound-Rate-Limiting mit automatischem 4-Phasen-Warmup fuer neue IPs. Per-Domain Transport-Drosselung (Gmail, Outlook, Yahoo etc.) und konfigurierbarer Batch-Worker fuer kontrollierte Zustellung
 - **Echtzeit-Monitoring** - Dashboard mit Zustellstatistiken, Queue-Status, Aktivitaetslog und Verlaufsdiagramm
+- **Konfigurierbare Zeitzone** - Zeitzone fuer die Anzeige aller Zeitstempel im Admin-Panel einstellbar (intern bleibt alles UTC). Container-Zeitzone per `TZ` Umgebungsvariable konfigurierbar
 - **Einklappbare Seitenleiste** - Sidebar per Toggle-Button ein-/ausklappbar, Zustand wird gespeichert
 - **Docker-basiert** - Drei Container (Caddy, Admin-Panel, Open-Mail-Relay), einfach zu deployen
 
@@ -75,6 +76,7 @@ Standard-Login: `admin` / (Wert aus `ADMIN_DEFAULT_PASSWORD`)
 | `ADMIN_SECRET_KEY` | Geheimer Schluessel fuer JWT-Token-Signierung | `ein-langer-zufaelliger-string` |
 | `ADMIN_DEFAULT_PASSWORD` | Initiales Passwort fuer den `admin`-Benutzer | `mein-sicheres-passwort` |
 | `LETSENCRYPT_EMAIL` | E-Mail-Adresse fuer Let's Encrypt-Benachrichtigungen | `admin@example.com` |
+| `TZ` | Zeitzone fuer Container-Logs (Postfix, Caddy) | `Europe/Berlin` |
 
 > **Hinweis:** Der Mail-Relay-Hostname (`myhostname`) wird direkt in `postfix/main.cf` konfiguriert und ueber das Admin-Panel verwaltet - nicht in der `.env`-Datei.
 
@@ -110,6 +112,7 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - TLS-Zertifikat-Status (Let's Encrypt + Postfix)
 - Verbindungseinstellungen zum Kopieren (SMTP-Host, Ports, TLS-Status)
 - Manuelle Zertifikat-Synchronisierung und Postfix-Reload
+- **Zeitzone** konfigurierbar fuer alle Zeitstempel-Anzeigen im Admin-Panel (Standard: Europe/Berlin)
 
 ### SMTP-Benutzer (SASL)
 - SMTP-Benutzer anlegen, aktivieren/deaktivieren, loeschen

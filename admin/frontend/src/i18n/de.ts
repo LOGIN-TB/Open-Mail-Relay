@@ -79,6 +79,10 @@ export default {
     stepTlsSync: 'TLS-Zertifikat synchronisieren...',
     hostnameChangeSuccess: 'Hostname erfolgreich geaendert',
     hostnameChangePartial: 'Hostname geaendert, TLS-Zertifikat muss manuell synchronisiert werden',
+    timezone: 'Zeitzone',
+    timezoneLabel: 'Zeitzone',
+    timezoneHint: 'Zeitzone fuer die Anzeige von Zeitstempeln im Admin-Panel. Intern wird alles in UTC gespeichert.',
+    timezoneSaved: 'Zeitzone gespeichert',
   },
   users: {
     title: 'Benutzerverwaltung',

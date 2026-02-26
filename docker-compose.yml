@@ -15,6 +15,7 @@ services:
     environment:
       - ADMIN_HOSTNAME=${ADMIN_HOSTNAME}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+      - TZ=${TZ:-Europe/Berlin}
     restart: unless-stopped
     networks:
       - mail-network
@@ -48,6 +49,8 @@ services:
       - postfix-queue:/var/spool/postfix
       - mail-log:/var/log/mail
       - caddy-data:/etc/caddy-data:ro
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
     logging:
       driver: "json-file"
       options:

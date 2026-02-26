@@ -4,8 +4,10 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models import User, AuditLog
-from app.schemas import ServerConfig, ServerConfigUpdate, TlsStatus, ConnectionInfo, PortInfo
+from app.models import User, AuditLog, SystemSetting
+from zoneinfo import available_timezones
+
+from app.schemas import ServerConfig, ServerConfigUpdate, TlsStatus, ConnectionInfo, PortInfo, TimezoneSettings, TimezoneUpdate
 from app.services.postfix_service import (
     read_main_cf,
     update_main_cf,
@@ -172,3 +174,39 @@ def reload_config(
     if not success:
         raise HTTPException(status_code=500, detail=f"Reload failed: {output}")
     return {"message": "Postfix reloaded successfully", "output": output}
+
+
+@router.get("/timezone", response_model=TimezoneSettings)
+def get_timezone(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "timezone").first()
+    return TimezoneSettings(timezone=setting.value if setting else "Europe/Berlin")
+
+
+@router.put("/timezone", response_model=TimezoneSettings)
+def update_timezone(
+    body: TimezoneUpdate,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if body.timezone not in available_timezones():
+        raise HTTPException(status_code=400, detail=f"Unbekannte Zeitzone: {body.timezone}")
+
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "timezone").first()
+    if setting:
+        setting.value = body.timezone
+    else:
+        db.add(SystemSetting(key="timezone", value=body.timezone))
+
+    db.add(AuditLog(
+        user_id=user.id,
+        action="timezone_updated",
+        details=f"Zeitzone geaendert: {body.timezone}",
+        ip_address=request.client.host if request.client else None,
+    ))
+    db.commit()
+
+    return TimezoneSettings(timezone=body.timezone)

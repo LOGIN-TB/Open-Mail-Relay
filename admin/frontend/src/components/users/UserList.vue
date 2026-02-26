@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Button from 'primevue/button'
 import t from '../../i18n/de'
+import { formatDateTimeShort } from '../../utils/dateFormat'
 
 defineProps<{
   users: {
@@ -19,14 +20,7 @@ const emit = defineEmits<{
 }>()
 
 function formatDate(ts: string | null): string {
-  if (!ts) return '-'
-  return new Date(ts).toLocaleString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatDateTimeShort(ts)
 }
 </script>
 

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useProtokollStore } from '../../stores/protokoll'
 import t from '../../i18n/de'
+import { formatDateTime } from '../../utils/dateFormat'
 
 const store = useProtokollStore()
 const expandedId = ref<number | null>(null)
@@ -31,14 +32,7 @@ function statusLabel(status: string): string {
 }
 
 function formatTime(ts: string): string {
-  return new Date(ts).toLocaleString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
+  return formatDateTime(ts)
 }
 </script>
 
