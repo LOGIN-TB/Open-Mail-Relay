@@ -15,6 +15,7 @@ from app.auth import get_password_hash
 from app.routers import auth_router, dashboard_router, network_router, config_router, logs_router
 from app.routers import smtp_users_router
 from app.routers import throttle_router
+from app.routers import ip_bans_router
 from app.services.stats_collector import StatsCollector
 from app.services.sasl_service import sync_dovecot_users
 from app.services.policy_server import PolicyServer
@@ -119,6 +120,16 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
+    # Generate client_access file from DB on every start
+    from app.services.ban_service import generate_client_access_file
+    db = SessionLocal()
+    try:
+        generate_client_access_file(db)
+    except Exception as e:
+        logger.warning(f"Initial client_access sync failed: {e}")
+    finally:
+        db.close()
+
     global stats_collector, policy_server, batch_worker
     stats_collector = StatsCollector()
     collector_task = asyncio.create_task(stats_collector.run())
@@ -130,9 +141,31 @@ async def lifespan(app: FastAPI):
     batch_worker = BatchWorker()
     worker_task = asyncio.create_task(batch_worker.run())
 
+    # Ban expiry background task — check every 60 seconds
+    async def ban_expiry_loop():
+        from app.services.ban_service import check_expired_bans
+        while True:
+            await asyncio.sleep(60)
+            try:
+                db = SessionLocal()
+                try:
+                    check_expired_bans(db)
+                finally:
+                    db.close()
+            except Exception as e:
+                logger.error(f"Ban expiry check error: {e}")
+
+    ban_expiry_task = asyncio.create_task(ban_expiry_loop())
+
     yield
 
     # Shutdown
+    ban_expiry_task.cancel()
+    try:
+        await ban_expiry_task
+    except asyncio.CancelledError:
+        pass
+
     from app.services.log_broadcaster import broadcaster
     broadcaster.stop()
 
@@ -178,6 +211,7 @@ app.include_router(config_router.router, prefix="/api/config", tags=["config"])
 app.include_router(logs_router.router, prefix="/api/logs", tags=["logs"])
 app.include_router(smtp_users_router.router, prefix="/api/smtp-users", tags=["smtp-users"])
 app.include_router(throttle_router.router, prefix="/api/throttling", tags=["throttling"])
+app.include_router(ip_bans_router.router, prefix="/api/ip-bans", tags=["ip-bans"])
 
 # Serve Vue.js SPA
 static_dir = Path("/app/static")

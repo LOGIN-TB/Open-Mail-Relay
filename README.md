@@ -11,6 +11,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
 - **Automatisches TLS** - Caddy beschafft und erneuert Let's Encrypt-Zertifikate automatisch. Synchronisierung nach Postfix alle 6 Stunden
 - **IP-basierte Autorisierung** - Relay nur fuer konfigurierte Netzwerke (CIDR), verwaltbar ueber das Admin-Panel. Jedes Netzwerk kann einem Inhaber zugeordnet werden
 - **SMTP-Benutzer-Authentifizierung (SASL)** - Zusaetzlich zur IP-Whitelist koennen SMTP-Benutzer mit Benutzername/Passwort von beliebigen IPs relayen. Dovecot-basiertes SASL, verwaltbar ueber das Admin-Panel inkl. PDF-Konfigurationsblatt
+- **Automatische IP-Sperre** - Erkennt Brute-Force-Versuche (SASL-Auth-Fehler, Relay-Ablehnungen) und sperrt IPs automatisch mit progressiver Dauer (30 Min → 6 Std → 24 Std → 7 Tage). Admins koennen IPs auch manuell sperren/entsperren. Durchsetzung ueber Postfix CIDR Access Map (Docker-freundlich, kein fail2ban noetig)
 - **Mail-Drosselung & IP-Warmup** - Outbound-Rate-Limiting mit automatischem 4-Phasen-Warmup fuer neue IPs. Per-Domain Transport-Drosselung (Gmail, Outlook, Yahoo etc.) und konfigurierbarer Batch-Worker fuer kontrollierte Zustellung
 - **Echtzeit-Monitoring** - Dashboard mit Zustellstatistiken, Queue-Status, Aktivitaetslog und Verlaufsdiagramm
 - **Quellenverfolgung** - Jedes Mail-Event zeigt Client-IP und SMTP-Benutzer mit farbcodierten Badges (Protokoll + Dashboard)
@@ -38,6 +39,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
                     │      ├── Dashboard & Statistiken        │
                     │      ├── Netzwerk-/IP-Verwaltung        │
                     │      ├── SMTP-Benutzerverwaltung        │
+                    │      ├── IP-Sperren (automatisch/manuell) │
                     │      ├── Mail-Drosselung & IP-Warmup    │
                     │      ├── TLS-Zertifikat-Status          │
                     │      └── Benutzer- & Konfiguration      │

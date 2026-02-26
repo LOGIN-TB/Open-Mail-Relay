@@ -4,6 +4,40 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.4.0] - 2026-02-26
+
+### Hinzugefuegt
+- **Automatische IP-Sperre** - Nach konfigurierbarer Anzahl von Fehlversuchen (Standard: 5 in 10 Minuten) werden IPs automatisch gesperrt
+  - Erkennung von SASL-Authentifizierungsfehlern und Relay-Ablehnungen ueber Log-Parsing
+  - Progressive Sperrdauer: 30 Min → 6 Std → 24 Std → 7 Tage (konfigurierbar)
+  - Whitelisted IPs (mynetworks) werden nie gesperrt (`permit_mynetworks` kommt zuerst)
+  - Automatische Entsperrung nach Ablauf der Sperrdauer (Hintergrund-Task alle 60 Sekunden)
+- **Manuelle IP-Sperre** - Admins koennen IPs manuell dauerhaft sperren und entsperren
+- **Neue Admin-Panel-Seite "IP-Sperren"** mit drei Bereichen:
+  - Tabelle aller Sperren (aktive hervorgehoben, mit Status-Badges und Countdown)
+  - Formular zum manuellen Sperren einer IP (Adresse + Notizen)
+  - Schwellenwerte konfigurieren (Max. Versuche, Zeitfenster, Sperrdauern-Liste)
+- **Postfix CIDR Access Map** - Durchsetzung ueber `/etc/postfix/client_access` (Docker-freundlich, kein fail2ban/iptables noetig)
+  - `smtpd_client_restrictions = permit_mynetworks, check_client_access cidr:/etc/postfix/client_access, permit`
+  - Datei wird aus DB generiert (wie `mynetworks` und `transport`)
+- Neue API-Endpunkte unter `/api/ip-bans`:
+  - `GET /ip-bans` — Alle Sperren auflisten
+  - `POST /ip-bans` — Manuelle Sperre erstellen
+  - `PUT /ip-bans/{id}` — Notizen aktualisieren
+  - `DELETE /ip-bans/{id}` — Sperre aufheben
+  - `GET /ip-bans/settings` — Schwellenwerte lesen
+  - `PUT /ip-bans/settings` — Schwellenwerte aendern
+- Alembic-Migration 009: `ip_bans`-Tabelle
+- Log-Parser: Neues `SASL_FAIL_RE`-Pattern erkennt fehlgeschlagene SASL-Authentifizierungen
+- Navigation: Neuer Eintrag "IP-Sperren" mit Ban-Icon zwischen "Netzwerke" und "SMTP-Benutzer"
+- Auto-Refresh der IP-Sperren-Tabelle alle 30 Sekunden
+- Inline-Bearbeitung von Notizen in der Sperren-Tabelle
+- Audit-Logging fuer alle IP-Sperren-Aktionen
+
+### Geaendert
+- `scripts/entrypoint.sh` — `smtpd_client_restrictions` und leere `client_access`-Datei beim Container-Start
+- Stats-Collector erkennt jetzt SASL-Fehler und Relay-Ablehnungen fuer automatische Sperrung
+
 ## [1.3.5] - 2026-02-26
 
 ### Hinzugefuegt

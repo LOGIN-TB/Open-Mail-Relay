@@ -7,7 +7,7 @@ from queue import Queue, Empty
 from app.database import SessionLocal
 from app.models import MailEvent, SmtpUser, StatsHourly
 from app.services.docker_service import get_mail_container
-from app.services.log_parser import parse_and_enrich
+from app.services.log_parser import parse_and_enrich, parse_auth_failure
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +74,10 @@ class StatsCollector:
             while self._running:
                 try:
                     line = self._line_queue.get_nowait()
+                    # Check for SASL auth failures (on every line)
+                    fail_ip = parse_auth_failure(line)
+                    if fail_ip:
+                        self._record_ban_failure(fail_ip, "sasl_auth_failed")
                     event = parse_and_enrich(line)
                     if event and event.status:
                         self._store_event(event)
@@ -97,6 +101,18 @@ class StatsCollector:
 
         if self._running:
             await asyncio.sleep(10)
+
+    def _record_ban_failure(self, ip_address: str, reason: str):
+        """Record a failed attempt for IP ban tracking."""
+        db = SessionLocal()
+        try:
+            from app.services.ban_service import record_failure
+            record_failure(db, ip_address, reason)
+        except Exception as e:
+            logger.error(f"Error recording ban failure: {e}")
+            db.rollback()
+        finally:
+            db.close()
 
     def _store_event(self, event):
         db = SessionLocal()
@@ -144,6 +160,10 @@ class StatsCollector:
                         smtp_user.last_used_at = event.timestamp
 
             db.commit()
+
+            # Record rejected events for ban tracking
+            if event.status == "rejected" and event.client_ip:
+                self._record_ban_failure(event.client_ip, "relay_rejected")
 
             self._cleanup_old_events(db)
         except Exception as e:

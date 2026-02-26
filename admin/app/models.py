@@ -111,6 +111,22 @@ class Network(Base):
     created_at = Column(DateTime, default=func.now())
 
 
+class IpBan(Base):
+    __tablename__ = "ip_bans"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ip_address = Column(String, unique=True, nullable=False, index=True)
+    reason = Column(String, nullable=False)  # sasl_auth_failed, relay_rejected, manual
+    ban_count = Column(Integer, default=1)
+    fail_count = Column(Integer, default=0)
+    first_fail_at = Column(DateTime, nullable=True)
+    banned_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)  # NULL = permanent/manual
+    is_active = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=func.now())
+    notes = Column(String, default="")
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

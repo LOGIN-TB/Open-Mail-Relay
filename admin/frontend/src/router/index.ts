@@ -30,6 +30,11 @@ const router = createRouter({
           component: () => import('../views/NetzwerkeView.vue'),
         },
         {
+          path: 'ip-sperren',
+          name: 'ip-bans',
+          component: () => import('../views/IpSperrenView.vue'),
+        },
+        {
           path: 'smtp-benutzer',
           name: 'smtp-users',
           component: () => import('../views/SmtpBenutzerView.vue'),

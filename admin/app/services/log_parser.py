@@ -46,6 +46,11 @@ CLIENT_RE = re.compile(
     r"(?:.*?sasl_username=(?P<sasl_username>\S+))?"
 )
 
+# SASL authentication failure: warning: hostname[IP]: SASL ... authentication failed
+SASL_FAIL_RE = re.compile(
+    r"warning:.*\[(?P<client_ip>[^\]]+)\]: SASL (?:LOGIN|PLAIN|CRAM-MD5) authentication failed"
+)
+
 # Reject line: NOQUEUE: reject: ... from hostname[IP] ...
 REJECT_RE = re.compile(
     r"NOQUEUE: reject:.*?"
@@ -113,6 +118,14 @@ def parse_log_line(line: str) -> ParsedMailEvent | None:
             message=m.group("message"),
         )
 
+    return None
+
+
+def parse_auth_failure(line: str) -> str | None:
+    """Return client IP if the line is a SASL authentication failure, else None."""
+    m = SASL_FAIL_RE.search(line)
+    if m:
+        return m.group("client_ip")
     return None
 
 

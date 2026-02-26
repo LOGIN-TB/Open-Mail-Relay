@@ -329,3 +329,43 @@ class ThrottleMetrics(BaseModel):
     sent_this_hour: int = 0
     held_count: int = 0
     limits: WarmupLimits | None = None
+
+
+# --- IP Bans ---
+
+class IpBanCreate(BaseModel):
+    ip_address: str
+    reason: str = "manual"
+    notes: str = ""
+
+    @field_validator("ip_address")
+    @classmethod
+    def validate_ip(cls, v: str) -> str:
+        v = v.strip()
+        ipaddress.ip_address(v)
+        return v
+
+
+class IpBanOut(BaseModel):
+    id: int
+    ip_address: str
+    reason: str
+    ban_count: int
+    fail_count: int
+    banned_at: datetime | None = None
+    expires_at: datetime | None = None
+    is_active: bool
+    created_at: datetime | None = None
+    notes: str = ""
+
+    model_config = {"from_attributes": True}
+
+
+class IpBanUpdate(BaseModel):
+    notes: str
+
+
+class IpBanSettings(BaseModel):
+    max_attempts: int = 5
+    time_window_minutes: int = 10
+    ban_durations: list[int] = [30, 360, 1440, 10080]
