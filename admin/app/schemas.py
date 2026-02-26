@@ -40,9 +40,9 @@ class UserUpdate(BaseModel):
 
 # --- Networks ---
 
-class NetworkEntry(BaseModel):
+class NetworkCreate(BaseModel):
     cidr: str
-    description: str = ""
+    owner: str = ""
 
     @field_validator("cidr")
     @classmethod
@@ -51,8 +51,18 @@ class NetworkEntry(BaseModel):
         return str(ipaddress.ip_network(v, strict=False))
 
 
-class NetworkList(BaseModel):
-    networks: list[str]
+class NetworkOut(BaseModel):
+    id: int
+    cidr: str
+    owner: str
+    is_protected: bool
+    created_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class NetworkUpdate(BaseModel):
+    owner: str
 
 
 # --- Config ---

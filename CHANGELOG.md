@@ -4,6 +4,23 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.3.5] - 2026-02-26
+
+### Hinzugefuegt
+- **Inhaber-Feld fuer Netzwerke / IP-Whitelist** - Jedes Netzwerk kann jetzt einem Inhaber zugeordnet werden (z.B. Firma, Dienst)
+  - Netzwerke werden in der Datenbank gespeichert (statt als reine Textdatei) — gleiches Muster wie SMTP-Benutzer und Transport-Regeln
+  - Neues Feld "Inhaber" beim Hinzufuegen von Netzwerken und nachtraeglich per Inline-Editing aenderbar
+  - Neue Spalten in der Netzwerk-Tabelle: CIDR, Inhaber, Erstellt, Aktion
+  - Geschuetzte Netze (127.0.0.0/8, 172.16.0.0/12) mit Inhaber "System" und Loeschsperre
+  - `DELETE /api/networks/{id}` nutzt jetzt DB-ID statt CIDR-Pfad-Parameter
+  - `PUT /api/networks/{id}` — Neuer Endpunkt zum Aktualisieren des Inhabers
+  - Bestehende Netzwerke aus der mynetworks-Datei werden bei der Migration automatisch uebernommen
+- Alembic-Migration 008: `networks`-Tabelle mit Datenmigration aus bestehender mynetworks-Datei
+
+### Geaendert
+- `postfix/mynetworks` wird jetzt aus der Datenbank generiert (wie `postfix/transport` und `postfix/dovecot-users`)
+- Config-Router liest Netzwerk-Anzahl und erlaubte Netzwerke aus der Datenbank statt aus der Datei
+
 ## [1.3.4] - 2026-02-26
 
 ### Hinzugefuegt

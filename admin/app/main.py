@@ -100,6 +100,16 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
+    # Generate mynetworks file from DB on every start
+    from app.services.postfix_service import generate_mynetworks_file
+    db = SessionLocal()
+    try:
+        generate_mynetworks_file(db)
+    except Exception as e:
+        logger.warning(f"Initial mynetworks sync failed: {e}")
+    finally:
+        db.close()
+
     # Seed default throttle data
     db = SessionLocal()
     try:

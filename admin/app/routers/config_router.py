@@ -4,14 +4,13 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models import User, AuditLog, SystemSetting
+from app.models import User, AuditLog, SystemSetting, Network
 from zoneinfo import available_timezones
-
 from app.schemas import ServerConfig, ServerConfigUpdate, TlsStatus, ConnectionInfo, PortInfo, TimezoneSettings, TimezoneUpdate
 from app.services.postfix_service import (
     read_main_cf,
     update_main_cf,
-    read_mynetworks,
+    get_networks_count,
 )
 from app.services.docker_service import reload_postfix, restart_caddy
 from app.services.cert_service import get_tls_status, sync_certs_to_postfix, wait_for_cert
@@ -20,22 +19,28 @@ router = APIRouter()
 
 
 @router.get("", response_model=ServerConfig)
-def get_config(user: User = Depends(get_current_user)):
+def get_config(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     cf = read_main_cf()
     return ServerConfig(
         hostname=cf.get("myhostname", "unknown"),
         domain=cf.get("mydomain", "unknown"),
         relay_domains=cf.get("relay_domains", "*"),
         message_size_limit=int(cf.get("message_size_limit", "52428800")),
-        mynetworks_count=len(read_mynetworks()),
+        mynetworks_count=get_networks_count(db),
     )
 
 
 @router.get("/connection", response_model=ConnectionInfo)
-def get_connection_info(user: User = Depends(get_current_user)):
+def get_connection_info(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     cf = read_main_cf()
     tls = get_tls_status()
-    networks = read_mynetworks()
+    networks = [n.cidr for n in db.query(Network).order_by(Network.cidr).all()]
 
     hostname = cf.get("myhostname", "unknown")
     size_bytes = int(cf.get("message_size_limit", "52428800"))

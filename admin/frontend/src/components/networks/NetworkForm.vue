@@ -5,15 +5,17 @@ import Button from 'primevue/button'
 import t from '../../i18n/de'
 
 const cidr = ref('')
+const owner = ref('')
 
 const emit = defineEmits<{
-  add: [cidr: string]
+  add: [payload: { cidr: string; owner: string }]
 }>()
 
 function submit() {
   if (cidr.value.trim()) {
-    emit('add', cidr.value.trim())
+    emit('add', { cidr: cidr.value.trim(), owner: owner.value.trim() })
     cidr.value = ''
+    owner.value = ''
   }
 }
 </script>
@@ -26,6 +28,14 @@ function submit() {
         <InputText
           v-model="cidr"
           :placeholder="t.networks.cidrPlaceholder"
+          class="cidr-input"
+        />
+      </div>
+      <div class="field">
+        <label>{{ t.networks.owner }}</label>
+        <InputText
+          v-model="owner"
+          :placeholder="t.networks.ownerPlaceholder"
           class="cidr-input"
         />
       </div>

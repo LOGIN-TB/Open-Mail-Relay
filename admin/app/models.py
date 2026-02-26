@@ -101,6 +101,16 @@ class SmtpUser(Base):
     last_used_at = Column(DateTime, nullable=True)
 
 
+class Network(Base):
+    __tablename__ = "networks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cidr = Column(String, unique=True, nullable=False, index=True)
+    owner = Column(String, default="")
+    is_protected = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=func.now())
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

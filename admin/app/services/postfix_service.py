@@ -2,6 +2,8 @@ import logging
 import re
 from pathlib import Path
 
+from sqlalchemy.orm import Session
+
 from app.config import settings
 from app.services.docker_service import exec_in_container, reload_postfix
 
@@ -10,50 +12,29 @@ logger = logging.getLogger(__name__)
 MYNETWORKS_FILE = settings.POSTFIX_CONFIG_PATH / "mynetworks"
 MAIN_CF_FILE = settings.POSTFIX_CONFIG_PATH / "main.cf"
 
-# Protected networks that cannot be removed
-PROTECTED_NETWORKS = {"127.0.0.0/8", "172.16.0.0/12"}
 
+def generate_mynetworks_file(db: Session) -> tuple[bool, str]:
+    """Generate mynetworks file from DB and reload Postfix."""
+    from app.models import Network
 
-def read_mynetworks() -> list[str]:
-    try:
-        content = MYNETWORKS_FILE.read_text().strip()
-        return [line.strip() for line in content.splitlines() if line.strip() and not line.strip().startswith("#")]
-    except FileNotFoundError:
-        return list(PROTECTED_NETWORKS)
+    networks = db.query(Network).order_by(Network.cidr).all()
+    cidrs = [n.cidr for n in networks]
 
+    MYNETWORKS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    MYNETWORKS_FILE.write_text("\n".join(cidrs) + "\n")
 
-def write_mynetworks(networks: list[str]) -> None:
-    # Always ensure protected networks are present
-    network_set = set(networks)
-    for net in PROTECTED_NETWORKS:
-        network_set.add(net)
-    MYNETWORKS_FILE.write_text("\n".join(sorted(network_set)) + "\n")
-
-
-def add_network(cidr: str) -> tuple[bool, str]:
-    networks = read_mynetworks()
-    if cidr in networks:
-        return False, f"Network {cidr} already exists"
-    networks.append(cidr)
-    write_mynetworks(networks)
     success, output = reload_postfix()
     if not success:
-        return False, f"Network added but Postfix reload failed: {output}"
-    return True, f"Network {cidr} added successfully"
+        logger.error(f"Postfix reload failed after mynetworks update: {output}")
+        return False, output
+    return True, "mynetworks updated"
 
 
-def remove_network(cidr: str) -> tuple[bool, str]:
-    if cidr in PROTECTED_NETWORKS:
-        return False, f"Cannot remove protected network {cidr}"
-    networks = read_mynetworks()
-    if cidr not in networks:
-        return False, f"Network {cidr} not found"
-    networks.remove(cidr)
-    write_mynetworks(networks)
-    success, output = reload_postfix()
-    if not success:
-        return False, f"Network removed but Postfix reload failed: {output}"
-    return True, f"Network {cidr} removed successfully"
+def get_networks_count(db: Session) -> int:
+    """Return count of networks from DB."""
+    from app.models import Network
+
+    return db.query(Network).count()
 
 
 def get_queue() -> list[dict]:
