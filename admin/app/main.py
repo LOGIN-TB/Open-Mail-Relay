@@ -45,10 +45,50 @@ def create_default_admin():
         db.close()
 
 
+def run_migrations():
+    """Run Alembic migrations to bring DB up to date.
+
+    Handles three cases:
+    1. Fresh DB (no tables) — create_all + stamp head
+    2. Existing DB without alembic_version — stamp to last known + upgrade
+    3. Existing DB with alembic_version — just upgrade to head
+    """
+    from alembic.config import Config
+    from alembic import command
+    from sqlalchemy import inspect, text
+
+    alembic_dir = Path(__file__).resolve().parent.parent / "alembic"
+    alembic_cfg = Config(str(alembic_dir.parent / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(alembic_dir))
+
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+
+    if not tables or "users" not in tables:
+        # Case 1: Fresh DB — create all tables, then stamp as current
+        Base.metadata.create_all(bind=engine)
+        command.stamp(alembic_cfg, "head")
+        logger.info("Fresh database created and stamped at head")
+    elif "alembic_version" not in tables:
+        # Case 2: Existing DB from before Alembic tracking — stamp at 004, then upgrade
+        command.stamp(alembic_cfg, "004")
+        logger.info("Existing database stamped at 004")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Database upgraded to head")
+    else:
+        # Case 3: Normal upgrade
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Database migrations applied")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    Base.metadata.create_all(bind=engine)
+    # Startup — run Alembic migrations
+    try:
+        run_migrations()
+    except Exception as e:
+        logger.warning(f"Alembic migration failed, falling back to create_all: {e}")
+        Base.metadata.create_all(bind=engine)
     create_default_admin()
 
     # Sync Dovecot users from DB (regenerate passwd-file on every start)

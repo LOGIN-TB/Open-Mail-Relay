@@ -15,8 +15,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column("smtp_users", sa.Column("company", sa.String(), nullable=True))
-    op.add_column("smtp_users", sa.Column("service", sa.String(), nullable=True))
+    conn = op.get_bind()
+    columns = [row[1] for row in conn.execute(sa.text("PRAGMA table_info(smtp_users)"))]
+    if "company" not in columns:
+        op.add_column("smtp_users", sa.Column("company", sa.String(), nullable=True))
+    if "service" not in columns:
+        op.add_column("smtp_users", sa.Column("service", sa.String(), nullable=True))
 
 
 def downgrade() -> None:
