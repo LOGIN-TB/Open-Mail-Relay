@@ -121,6 +121,7 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - Automatische Passwort-Generierung (Format: xxxx-xxxxxx-xxxx)
 - Passwort jederzeit regenerierbar
 - **PDF-Konfigurationsblatt** mit Zugangsdaten, Zuordnung (Firma/Dienst) und Einrichtungsanleitung
+- **Letzte Nutzung** - Zeigt an, wann ein SMTP-Benutzer zuletzt eine Mail versendet hat
 - Fernet-verschluesselte Passwoerter in der Datenbank
 - Automatische Synchronisierung mit Dovecot (SASL-Backend)
 

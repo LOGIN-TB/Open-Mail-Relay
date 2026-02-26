@@ -98,6 +98,7 @@ class SmtpUser(Base):
     service = Column(String, nullable=True)
     created_at = Column(DateTime, default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    last_used_at = Column(DateTime, nullable=True)
 
 
 class AuditLog(Base):

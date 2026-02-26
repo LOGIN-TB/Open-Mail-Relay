@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from queue import Queue, Empty
 
 from app.database import SessionLocal
-from app.models import MailEvent, StatsHourly
+from app.models import MailEvent, SmtpUser, StatsHourly
 from app.services.docker_service import get_mail_container
 from app.services.log_parser import parse_and_enrich
 
@@ -133,6 +133,15 @@ class StatsCollector:
                 stats.bounced_count += 1
             elif event.status == "rejected":
                 stats.rejected_count += 1
+
+            # Update last_used_at on SMTP user
+            if event.sasl_username:
+                smtp_user = db.query(SmtpUser).filter(
+                    SmtpUser.username == event.sasl_username
+                ).first()
+                if smtp_user:
+                    if not smtp_user.last_used_at or event.timestamp > smtp_user.last_used_at:
+                        smtp_user.last_used_at = event.timestamp
 
             db.commit()
 

@@ -191,6 +191,7 @@ class SmtpUserOut(BaseModel):
     service: str | None = None
     created_at: datetime | None = None
     created_by: int | None = None
+    last_used_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

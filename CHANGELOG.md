@@ -4,6 +4,14 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.3.4] - 2026-02-26
+
+### Hinzugefuegt
+- **Letzte Nutzung fuer SMTP-Benutzer** - Neue Spalte "Letzte Nutzung" in der SMTP-Benutzer-Tabelle zeigt, wann ein Benutzer zuletzt eine Mail versendet hat
+  - Automatische Aktualisierung bei jedem Mail-Versand ueber SASL-Authentifizierung
+  - Bestehende Daten werden bei der Migration aus vorhandenen Mail-Events nachgetragen
+- Alembic-Migration 007: `last_used_at` Spalte in `smtp_users` mit Backfill aus `mail_events`
+
 ## [1.3.3] - 2026-02-26
 
 ### Hinzugefuegt

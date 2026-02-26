@@ -13,6 +13,7 @@ export interface SmtpUserItem {
   service: string | null
   created_at: string | null
   created_by: number | null
+  last_used_at: string | null
 }
 
 defineProps<{
@@ -65,6 +66,7 @@ function formatDate(ts: string | null): string {
           <th>{{ t.smtpUsers.service }}</th>
           <th>{{ t.smtpUsers.status }}</th>
           <th>{{ t.smtpUsers.created }}</th>
+          <th>{{ t.smtpUsers.lastUsed }}</th>
           <th style="width: 220px">{{ t.smtpUsers.actions }}</th>
         </tr>
       </thead>
@@ -100,6 +102,7 @@ function formatDate(ts: string | null): string {
             <span v-else class="badge-inactive">{{ t.smtpUsers.inactive }}</span>
           </td>
           <td class="date-col">{{ formatDate(user.created_at) }}</td>
+          <td class="date-col">{{ user.last_used_at ? formatDate(user.last_used_at) : '-' }}</td>
           <td>
             <div class="actions">
               <Button

@@ -153,6 +153,7 @@ export default {
     inactive: 'Inaktiv',
     created: 'Erstellt',
     createdBy: 'Erstellt von',
+    lastUsed: 'Letzte Nutzung',
     actions: 'Aktionen',
     activate: 'Aktivieren',
     deactivate: 'Deaktivieren',
