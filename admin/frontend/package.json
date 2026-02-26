@@ -13,7 +13,7 @@
     "vue-router": "^4.5.0",
     "pinia": "^2.3.0",
     "primevue": "^4.3.1",
-    "@primevue/themes": "^4.3.1",
+    "@primeuix/themes": "^2.0.0",
     "primeicons": "^7.0.0",
     "chart.js": "^4.4.7",
     "vue-chartjs": "^5.3.2",
