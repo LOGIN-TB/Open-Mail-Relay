@@ -117,11 +117,16 @@ def delete_ip_ban(
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    """Unban an IP address."""
+    """Unban an active IP or delete an inactive ban record entirely."""
     ban = db.query(IpBan).filter(IpBan.id == ban_id).first()
     if not ban:
         raise HTTPException(status_code=404, detail="IP-Sperre nicht gefunden")
 
     ip = ban.ip_address
-    unban_ip(db, ban_id)
-    _audit(db, admin, "ip_unbanned", f"Unbanned IP {ip}", request)
+    if ban.is_active:
+        unban_ip(db, ban_id)
+        _audit(db, admin, "ip_unbanned", f"Unbanned IP {ip}", request)
+    else:
+        db.delete(ban)
+        db.commit()
+        _audit(db, admin, "ip_ban_deleted", f"Deleted ban record for IP {ip}", request)

@@ -85,6 +85,26 @@ async function doUnban(banId: number) {
   }
 }
 
+function confirmDelete(ban: IpBanItem) {
+  confirm.require({
+    message: t.ipBans.confirmDelete,
+    header: t.ipBans.delete,
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-danger',
+    accept: () => doDelete(ban.id),
+  })
+}
+
+async function doDelete(banId: number) {
+  try {
+    await api.delete(`/ip-bans/${banId}`)
+    toast.add({ severity: 'success', summary: t.common.success, detail: t.ipBans.banDeleted, life: 3000 })
+    await fetchBans()
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
+  }
+}
+
 async function saveSettings(settings: BanSettingsData) {
   try {
     await api.put('/ip-bans/settings', settings)
@@ -125,6 +145,7 @@ onUnmounted(() => {
       :bans="bans"
       :loading="loading"
       @unban="confirmUnban"
+      @delete="confirmDelete"
       @update-notes="updateNotes"
     />
 

@@ -25,6 +25,7 @@ defineProps<{
 
 const emit = defineEmits<{
   unban: [ban: IpBanItem]
+  delete: [ban: IpBanItem]
   updateNotes: [banId: number, notes: string]
 }>()
 
@@ -113,15 +114,25 @@ function expiresLabel(ban: IpBanItem): string {
             <span v-else class="cell-text">{{ ban.notes || '-' }}</span>
           </td>
           <td>
-            <Button
-              v-if="ban.is_active"
-              icon="pi pi-lock-open"
-              severity="success"
-              size="small"
-              text
-              :title="t.ipBans.unban"
-              @click="emit('unban', ban)"
-            />
+            <div class="actions">
+              <Button
+                v-if="ban.is_active"
+                icon="pi pi-lock-open"
+                severity="success"
+                size="small"
+                text
+                :title="t.ipBans.unban"
+                @click="emit('unban', ban)"
+              />
+              <Button
+                icon="pi pi-trash"
+                severity="danger"
+                size="small"
+                text
+                :title="t.ipBans.delete"
+                @click="emit('delete', ban)"
+              />
+            </div>
           </td>
         </tr>
       </tbody>
@@ -237,5 +248,10 @@ function expiresLabel(ban: IpBanItem): string {
 
 .inline-edit {
   width: 100%;
+}
+
+.actions {
+  display: flex;
+  gap: 0.25rem;
 }
 </style>
