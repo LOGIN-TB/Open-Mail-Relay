@@ -13,6 +13,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
 - **SMTP-Benutzer-Authentifizierung (SASL)** - Zusaetzlich zur IP-Whitelist koennen SMTP-Benutzer mit Benutzername/Passwort von beliebigen IPs relayen. Dovecot-basiertes SASL, verwaltbar ueber das Admin-Panel inkl. PDF-Konfigurationsblatt
 - **Mail-Drosselung & IP-Warmup** - Outbound-Rate-Limiting mit automatischem 4-Phasen-Warmup fuer neue IPs. Per-Domain Transport-Drosselung (Gmail, Outlook, Yahoo etc.) und konfigurierbarer Batch-Worker fuer kontrollierte Zustellung
 - **Echtzeit-Monitoring** - Dashboard mit Zustellstatistiken, Queue-Status, Aktivitaetslog und Verlaufsdiagramm
+- **Quellenverfolgung** - Jedes Mail-Event zeigt Client-IP und SMTP-Benutzer mit farbcodierten Badges (Protokoll + Dashboard)
 - **Konfigurierbare Zeitzone** - Zeitzone fuer die Anzeige aller Zeitstempel im Admin-Panel einstellbar (intern bleibt alles UTC). Container-Zeitzone per `TZ` Umgebungsvariable konfigurierbar
 - **Einklappbare Seitenleiste** - Sidebar per Toggle-Button ein-/ausklappbar, Zustand wird gespeichert
 - **Docker-basiert** - Drei Container (Caddy, Admin-Panel, Open-Mail-Relay), einfach zu deployen
@@ -98,7 +99,7 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - Erfolgsrate
 - Zustellungsverlauf als Diagramm (letzte 24h)
 - Aktuelle Warteschlange
-- Letzte Aktivitaet (Live-Feed)
+- Letzte Aktivitaet (Live-Feed) mit Quellenverfolgung (Client-IP / SMTP-Benutzer) und aufklappbaren Details
 
 ### Netzwerke
 - CIDR-basierte IP-Whitelist verwalten
@@ -133,6 +134,14 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - Transport-Regeln mit CRUD-Verwaltung
 - Fail-Open-Design: Bei Fehler wird Mail nie blockiert
 - Warmup-Status auch auf dem Dashboard sichtbar
+
+### Protokoll
+- Vollstaendige Mail-Event-Historie mit Filterung nach Status, Zeitraum und Freitextsuche
+- **Quellenverfolgung** - Spalte "Quelle" zeigt SMTP-Benutzer (blau) oder Client-IP (grau/rot) mit farbcodierten Badges
+- Aufklappbare Detailzeilen mit Queue-ID, Groesse, DSN, Client-IP, SMTP-Benutzer und Nachricht
+- Suche nach Client-IP und SMTP-Benutzername
+- CSV-Export aller Events inkl. Quell-Informationen
+- Konfigurierbare Aufbewahrungsdauer
 
 ### Benutzerverwaltung
 - Admin-Benutzer anlegen, bearbeiten, loeschen

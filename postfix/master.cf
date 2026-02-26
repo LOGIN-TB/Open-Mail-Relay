@@ -33,3 +33,21 @@ lmtp      unix  -       -       n       -       -       lmtp
 anvil     unix  -       -       n       -       1       anvil
 scache    unix  -       -       n       -       1       scache
 postlog   unix-dgram n  -       n       -       1       postlogd
+# --- THROTTLED TRANSPORTS START ---
+gmail_throttled    unix  -       -       n       -       3       smtp
+  -o syslog_name=postfix/gmail_throttled
+  -o smtp_destination_concurrency_limit=3
+  -o smtp_destination_rate_delay=3s
+outlook_throttled    unix  -       -       n       -       2       smtp
+  -o syslog_name=postfix/outlook_throttled
+  -o smtp_destination_concurrency_limit=2
+  -o smtp_destination_rate_delay=5s
+yahoo_throttled    unix  -       -       n       -       3       smtp
+  -o syslog_name=postfix/yahoo_throttled
+  -o smtp_destination_concurrency_limit=3
+  -o smtp_destination_rate_delay=3s
+default_throttled    unix  -       -       n       -       5       smtp
+  -o syslog_name=postfix/default_throttled
+  -o smtp_destination_concurrency_limit=5
+  -o smtp_destination_rate_delay=1s
+# --- THROTTLED TRANSPORTS END ---

@@ -28,7 +28,10 @@ def _build_event_query(db: Session, status: str | None, search: str | None,
     if search:
         like = f"%{search}%"
         query = query.filter(
-            (MailEvent.sender.ilike(like)) | (MailEvent.recipient.ilike(like))
+            (MailEvent.sender.ilike(like))
+            | (MailEvent.recipient.ilike(like))
+            | (MailEvent.client_ip.ilike(like))
+            | (MailEvent.sasl_username.ilike(like))
         )
     if date_from:
         query = query.filter(MailEvent.timestamp >= date_from)
@@ -81,12 +84,14 @@ def export_events(
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["Zeitpunkt", "Status", "Queue-ID", "Absender", "Empfaenger",
-                     "Relay", "Delay", "DSN", "Groesse", "Nachricht"])
+                     "Relay", "Delay", "DSN", "Groesse", "Nachricht",
+                     "Client-IP", "SASL-Benutzer"])
     for e in events:
         writer.writerow([
             e.timestamp.isoformat() if e.timestamp else "",
             e.status, e.queue_id or "", e.sender or "", e.recipient or "",
             e.relay or "", e.delay or "", e.dsn or "", e.size or "", e.message or "",
+            e.client_ip or "", e.sasl_username or "",
         ])
 
     output.seek(0)

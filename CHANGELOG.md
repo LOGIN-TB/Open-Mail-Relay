@@ -4,6 +4,25 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.3.3] - 2026-02-26
+
+### Hinzugefuegt
+- **Quellenverfolgung fuer Mail-Events** - Jedes Mail-Event zeigt jetzt die Quelle an (Client-IP und/oder SMTP-Benutzer)
+  - Neue Spalte "Quelle" in Dashboard (Letzte Aktivitaet) und Protokoll-Tabelle
+  - Farbcodierte Badges: SMTP-Benutzer (blau), IP-Adresse (grau), abgelehnte IP (rot)
+  - Client-IP und SASL-Benutzername werden aus Postfix-Logs extrahiert und in der Datenbank gespeichert
+- **Aufklappbare Detailzeilen im Dashboard** - Klick auf ein Event in der Letzten Aktivitaet zeigt Queue-ID, Groesse, DSN, Client-IP und SMTP-Benutzer
+- **Erweiterte Suche** - Protokoll-Suche findet jetzt auch nach Client-IP und SMTP-Benutzername
+- **CSV-Export erweitert** - Exportierte Events enthalten jetzt Client-IP und SASL-Benutzer
+- Alembic-Migration 006: `client_ip` und `sasl_username` Spalten in `mail_events`
+- Log-Parser: Neues `CLIENT_RE`-Pattern extrahiert Client-IP und SASL-Benutzername aus `client=` Zeilen
+- Log-Parser: `REJECT_RE`-Pattern extrahiert jetzt auch die Client-IP bei abgelehnten Mails
+- i18n: Neue Uebersetzungsschluessel fuer Quellen-Spalte (`colSource`, `sourceSmtp`, `sourceIp`, `sourceUnknown`)
+
+### Geaendert
+- `postfix/master.cf`: Throttled-Transports fuer Gmail, Outlook, Yahoo und Default hinzugefuegt
+- Auto-generierte Dateien `postfix/throttle_enabled` und `postfix/transport` in `.gitignore` aufgenommen
+
 ## [1.3.2] - 2026-02-26
 
 ### Hinzugefuegt

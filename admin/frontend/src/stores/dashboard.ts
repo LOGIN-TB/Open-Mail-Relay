@@ -31,6 +31,8 @@ interface MailEvent {
   dsn: string | null
   size: number | null
   message: string | null
+  client_ip: string | null
+  sasl_username: string | null
 }
 
 interface QueueEntry {

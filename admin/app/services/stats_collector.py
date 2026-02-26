@@ -112,6 +112,8 @@ class StatsCollector:
                 dsn=event.dsn,
                 size=event.size,
                 message=event.message,
+                client_ip=event.client_ip,
+                sasl_username=event.sasl_username,
             )
             db.add(mail_event)
 

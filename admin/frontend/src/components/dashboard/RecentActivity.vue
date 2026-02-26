@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import t from '../../i18n/de'
 import { formatTimeShort } from '../../utils/dateFormat'
 
@@ -12,8 +13,19 @@ defineProps<{
     status: string
     relay: string | null
     delay: number | null
+    dsn: string | null
+    size: number | null
+    message: string | null
+    client_ip: string | null
+    sasl_username: string | null
   }[]
 }>()
+
+const expandedId = ref<number | null>(null)
+
+function toggleExpand(id: number) {
+  expandedId.value = expandedId.value === id ? null : id
+}
 
 function statusClass(status: string): string {
   const map: Record<string, string> = {
@@ -38,6 +50,19 @@ function statusLabel(status: string): string {
 function formatTime(ts: string): string {
   return formatTimeShort(ts)
 }
+
+function sourceDisplay(event: { sasl_username: string | null; client_ip: string | null; status: string }) {
+  if (event.sasl_username) {
+    return { text: event.sasl_username, cssClass: 'source-smtp', icon: 'pi-user' }
+  }
+  if (event.client_ip) {
+    if (event.status === 'rejected') {
+      return { text: event.client_ip, cssClass: 'source-rejected', icon: 'pi-exclamation-triangle' }
+    }
+    return { text: event.client_ip, cssClass: 'source-ip', icon: 'pi-globe' }
+  }
+  return { text: '-', cssClass: '', icon: '' }
+}
 </script>
 
 <template>
@@ -50,6 +75,7 @@ function formatTime(ts: string): string {
         <tr>
           <th>Zeit</th>
           <th>Status</th>
+          <th>Quelle</th>
           <th>Absender</th>
           <th>Empfaenger</th>
           <th>Relay</th>
@@ -57,14 +83,35 @@ function formatTime(ts: string): string {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="event in events" :key="event.id">
-          <td class="time-col">{{ formatTime(event.timestamp) }}</td>
-          <td><span class="status-badge" :class="statusClass(event.status)">{{ statusLabel(event.status) }}</span></td>
-          <td class="truncate">{{ event.sender ?? '-' }}</td>
-          <td class="truncate">{{ event.recipient ?? '-' }}</td>
-          <td class="truncate">{{ event.relay ?? '-' }}</td>
-          <td>{{ event.delay != null ? event.delay.toFixed(1) + 's' : '-' }}</td>
-        </tr>
+        <template v-for="event in events" :key="event.id">
+          <tr class="event-row" @click="toggleExpand(event.id)">
+            <td class="time-col">{{ formatTime(event.timestamp) }}</td>
+            <td><span class="status-badge" :class="statusClass(event.status)">{{ statusLabel(event.status) }}</span></td>
+            <td>
+              <span v-if="sourceDisplay(event).icon" class="source-badge" :class="sourceDisplay(event).cssClass">
+                <i class="pi" :class="sourceDisplay(event).icon"></i>
+                {{ sourceDisplay(event).text }}
+              </span>
+              <span v-else>-</span>
+            </td>
+            <td class="truncate">{{ event.sender ?? '-' }}</td>
+            <td class="truncate">{{ event.recipient ?? '-' }}</td>
+            <td class="truncate">{{ event.relay ?? '-' }}</td>
+            <td>{{ event.delay != null ? event.delay.toFixed(1) + 's' : '-' }}</td>
+          </tr>
+          <tr v-if="expandedId === event.id" class="detail-row">
+            <td colspan="7">
+              <div class="detail-grid">
+                <div><strong>{{ t.protokoll.colQueueId }}:</strong> {{ event.queue_id ?? '-' }}</div>
+                <div><strong>{{ t.protokoll.colSize }}:</strong> {{ event.size != null ? event.size + ' B' : '-' }}</div>
+                <div><strong>{{ t.protokoll.colDsn }}:</strong> {{ event.dsn ?? '-' }}</div>
+                <div v-if="event.client_ip"><strong>Client-IP:</strong> {{ event.client_ip }}</div>
+                <div v-if="event.sasl_username"><strong>SMTP-Benutzer:</strong> {{ event.sasl_username }}</div>
+                <div class="detail-full"><strong>{{ t.protokoll.colMessage }}:</strong> {{ event.message ?? '-' }}</div>
+              </div>
+            </td>
+          </tr>
+        </template>
       </tbody>
     </table>
     </div>
@@ -127,6 +174,15 @@ function formatTime(ts: string): string {
   color: #334155;
 }
 
+.event-row {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.event-row:hover {
+  background: #f8fafc;
+}
+
 .time-col {
   white-space: nowrap;
   font-size: 0.8rem;
@@ -152,4 +208,57 @@ function formatTime(ts: string): string {
 .status-deferred { background: #fef3c7; color: #92400e; }
 .status-bounced { background: #fee2e2; color: #991b1b; }
 .status-rejected { background: #ede9fe; color: #5b21b6; }
+
+/* Source badges */
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.source-badge .pi {
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+.source-smtp {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.source-ip {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.source-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Detail row */
+.detail-row td {
+  background: #f8fafc;
+  padding: 1rem;
+}
+
+.detail-grid {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+
+.detail-full {
+  width: 100%;
+  word-break: break-all;
+}
 </style>

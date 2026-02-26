@@ -5,6 +5,8 @@
 postfix/main.cf
 postfix/mynetworks
 postfix/dovecot-users
+postfix/throttle_enabled
+postfix/transport
 
 # Python
 __pycache__/

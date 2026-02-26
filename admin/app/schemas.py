@@ -125,6 +125,8 @@ class MailEventOut(BaseModel):
     dsn: str | None = None
     size: int | None = None
     message: str | None = None
+    client_ip: str | None = None
+    sasl_username: str | None = None
 
     model_config = {"from_attributes": True}
 

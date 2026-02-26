@@ -65,6 +65,8 @@ class MailEvent(Base):
     dsn = Column(String)
     size = Column(Integer)
     message = Column(Text)
+    client_ip = Column(String)
+    sasl_username = Column(String)
 
 
 class StatsHourly(Base):
