@@ -64,6 +64,8 @@ def create_smtp_user(
         username=body.username,
         password_encrypted=encrypt_password(password),
         is_active=True,
+        company=body.company,
+        service=body.service,
         created_by=admin.id,
     )
     db.add(user)
@@ -80,6 +82,8 @@ def create_smtp_user(
         id=user.id,
         username=user.username,
         is_active=user.is_active,
+        company=user.company,
+        service=user.service,
         created_at=user.created_at,
         created_by=user.created_by,
         password=password,
@@ -100,12 +104,15 @@ def update_smtp_user(
 
     if body.is_active is not None:
         user.is_active = body.is_active
+    if body.company is not None:
+        user.company = body.company
+    if body.service is not None:
+        user.service = body.service
 
     db.commit()
     db.refresh(user)
 
-    status_text = "aktiviert" if user.is_active else "deaktiviert"
-    _audit(db, admin, "smtp_user_updated", f"SMTP user '{user.username}' {status_text}", request)
+    _audit(db, admin, "smtp_user_updated", f"SMTP user '{user.username}' updated", request)
 
     success, msg = sync_dovecot_users(db)
     if not success:
@@ -141,6 +148,8 @@ def regenerate_password(
         id=user.id,
         username=user.username,
         is_active=user.is_active,
+        company=user.company,
+        service=user.service,
         created_at=user.created_at,
         created_by=user.created_by,
         password=password,
@@ -185,7 +194,10 @@ def download_config_pdf(
         raise HTTPException(status_code=500, detail="Passwort konnte nicht entschluesselt werden")
 
     smtp_host = _get_smtp_host()
-    pdf_bytes = generate_config_pdf(user.username, password, smtp_host)
+    pdf_bytes = generate_config_pdf(
+        user.username, password, smtp_host,
+        company=user.company, service=user.service,
+    )
 
     return Response(
         content=pdf_bytes,

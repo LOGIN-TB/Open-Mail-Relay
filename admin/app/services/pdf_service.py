@@ -12,7 +12,8 @@ from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 
 
-def generate_config_pdf(username: str, password: str, smtp_host: str) -> bytes:
+def generate_config_pdf(username: str, password: str, smtp_host: str,
+                        company: str | None = None, service: str | None = None) -> bytes:
     """Generate a PDF configuration sheet with SMTP credentials."""
     buffer = io.BytesIO()
 
@@ -66,6 +67,33 @@ def generate_config_pdf(username: str, password: str, smtp_host: str) -> bytes:
         body_style,
     ))
     elements.append(Spacer(1, 6 * mm))
+
+    # Assignment section (only if company or service is set)
+    if company or service:
+        elements.append(Paragraph("Zuordnung", heading_style))
+        assignment_data = [["Feld", "Wert"]]
+        if company:
+            assignment_data.append(["Firma", company])
+        if service:
+            assignment_data.append(["Dienst", service])
+
+        assignment_table = Table(assignment_data, colWidths=[55 * mm, 95 * mm])
+        assignment_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e293b")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 10),
+            ("FONTNAME", (0, 1), (0, -1), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 1), (-1, -1), 10),
+            ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f8fafc")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#f8fafc"), colors.white]),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(assignment_table)
 
     # Credentials table
     elements.append(Paragraph("Verbindungsdaten", heading_style))

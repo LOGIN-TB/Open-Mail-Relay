@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref, nextTick } from 'vue'
+import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import t from '../../i18n/de'
 
@@ -6,6 +8,8 @@ export interface SmtpUserItem {
   id: number
   username: string
   is_active: boolean
+  company: string | null
+  service: string | null
   created_at: string | null
   created_by: number | null
 }
@@ -20,7 +24,28 @@ const emit = defineEmits<{
   regeneratePassword: [user: SmtpUserItem]
   downloadPdf: [user: SmtpUserItem]
   delete: [user: SmtpUserItem]
+  updateField: [userId: number, field: string, value: string]
 }>()
+
+const editingCell = ref<{ userId: number; field: string } | null>(null)
+const editValue = ref('')
+
+async function startEdit(userId: number, field: string, currentValue: string | null) {
+  editingCell.value = { userId, field }
+  editValue.value = currentValue || ''
+  await nextTick()
+  const input = document.querySelector('.inline-edit input') as HTMLInputElement | null
+  input?.focus()
+}
+
+function commitEdit(userId: number, field: string) {
+  emit('updateField', userId, field, editValue.value.trim())
+  editingCell.value = null
+}
+
+function isEditing(userId: number, field: string): boolean {
+  return editingCell.value?.userId === userId && editingCell.value?.field === field
+}
 
 function formatDate(ts: string | null): string {
   if (!ts) return '-'
@@ -42,6 +67,8 @@ function formatDate(ts: string | null): string {
       <thead>
         <tr>
           <th>{{ t.smtpUsers.username }}</th>
+          <th>{{ t.smtpUsers.company }}</th>
+          <th>{{ t.smtpUsers.service }}</th>
           <th>{{ t.smtpUsers.status }}</th>
           <th>{{ t.smtpUsers.created }}</th>
           <th style="width: 220px">{{ t.smtpUsers.actions }}</th>
@@ -50,6 +77,30 @@ function formatDate(ts: string | null): string {
       <tbody>
         <tr v-for="user in users" :key="user.id">
           <td><strong>{{ user.username }}</strong></td>
+          <td class="editable-cell" @click="!isEditing(user.id, 'company') && startEdit(user.id, 'company', user.company)">
+            <InputText
+              v-if="isEditing(user.id, 'company')"
+              v-model="editValue"
+              size="small"
+              class="inline-edit"
+              :placeholder="t.smtpUsers.companyPlaceholder"
+              @blur="commitEdit(user.id, 'company')"
+              @keydown.enter="($event.target as HTMLInputElement).blur()"
+            />
+            <span v-else class="cell-text">{{ user.company || '-' }}</span>
+          </td>
+          <td class="editable-cell" @click="!isEditing(user.id, 'service') && startEdit(user.id, 'service', user.service)">
+            <InputText
+              v-if="isEditing(user.id, 'service')"
+              v-model="editValue"
+              size="small"
+              class="inline-edit"
+              :placeholder="t.smtpUsers.servicePlaceholder"
+              @blur="commitEdit(user.id, 'service')"
+              @keydown.enter="($event.target as HTMLInputElement).blur()"
+            />
+            <span v-else class="cell-text">{{ user.service || '-' }}</span>
+          </td>
           <td>
             <span v-if="user.is_active" class="badge-active">{{ t.smtpUsers.active }}</span>
             <span v-else class="badge-inactive">{{ t.smtpUsers.inactive }}</span>
@@ -130,6 +181,25 @@ function formatDate(ts: string | null): string {
 .smtp-table td {
   padding: 0.6rem 0.75rem;
   border-bottom: 1px solid #f1f5f9;
+}
+
+.editable-cell {
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.editable-cell:hover .cell-text {
+  color: #3b82f6;
+  text-decoration: underline dotted;
+}
+
+.cell-text {
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.inline-edit {
+  width: 100%;
 }
 
 .date-col {

@@ -113,9 +113,10 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 
 ### SMTP-Benutzer (SASL)
 - SMTP-Benutzer anlegen, aktivieren/deaktivieren, loeschen
+- Optionale Felder **Firma** und **Dienst** zur Zuordnung (inline editierbar)
 - Automatische Passwort-Generierung (Format: xxxx-xxxxxx-xxxx)
 - Passwort jederzeit regenerierbar
-- **PDF-Konfigurationsblatt** mit Zugangsdaten und Einrichtungsanleitung zum Herunterladen
+- **PDF-Konfigurationsblatt** mit Zugangsdaten, Zuordnung (Firma/Dienst) und Einrichtungsanleitung
 - Fernet-verschluesselte Passwoerter in der Datenbank
 - Automatische Synchronisierung mit Dovecot (SASL-Backend)
 

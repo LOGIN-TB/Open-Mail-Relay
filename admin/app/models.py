@@ -92,6 +92,8 @@ class SmtpUser(Base):
     username = Column(String, unique=True, nullable=False, index=True)
     password_encrypted = Column(String, nullable=False)  # Fernet-encrypted
     is_active = Column(Boolean, default=True)
+    company = Column(String, nullable=True)
+    service = Column(String, nullable=True)
     created_at = Column(DateTime, default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 

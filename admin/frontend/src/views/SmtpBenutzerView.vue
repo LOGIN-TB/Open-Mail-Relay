@@ -28,12 +28,26 @@ async function fetchUsers() {
   }
 }
 
-async function createUser(username: string) {
+async function createUser(payload: { username: string; company: string; service: string }) {
   try {
-    const { data } = await api.post('/smtp-users', { username })
+    const { data } = await api.post('/smtp-users', {
+      username: payload.username,
+      company: payload.company || null,
+      service: payload.service || null,
+    })
     toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.userCreated, life: 3000 })
     showForm.value = false
     credentialsUser.value = { id: data.id, username: data.username, password: data.password }
+    await fetchUsers()
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
+  }
+}
+
+async function updateField(userId: number, field: string, value: string) {
+  try {
+    await api.put(`/smtp-users/${userId}`, { [field]: value || null })
+    toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.userUpdated, life: 3000 })
     await fetchUsers()
   } catch (e: any) {
     toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
@@ -132,6 +146,7 @@ onMounted(fetchUsers)
       @regenerate-password="confirmRegenerate"
       @download-pdf="downloadPdf"
       @delete="confirmDelete"
+      @update-field="updateField"
     />
 
     <SmtpUserCredentials

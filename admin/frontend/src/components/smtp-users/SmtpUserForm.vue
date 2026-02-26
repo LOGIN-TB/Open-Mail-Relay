@@ -5,15 +5,21 @@ import Button from 'primevue/button'
 import t from '../../i18n/de'
 
 const emit = defineEmits<{
-  save: [username: string]
+  save: [payload: { username: string; company: string; service: string }]
   cancel: []
 }>()
 
 const username = ref('')
+const company = ref('')
+const service = ref('')
 
 function save() {
   if (username.value.trim()) {
-    emit('save', username.value.trim().toLowerCase())
+    emit('save', {
+      username: username.value.trim().toLowerCase(),
+      company: company.value.trim() || '',
+      service: service.value.trim() || '',
+    })
   }
 }
 </script>
@@ -30,6 +36,22 @@ function save() {
           class="w-full"
         />
         <small class="hint">{{ t.smtpUsers.usernameHint }}</small>
+      </div>
+      <div class="field">
+        <label>{{ t.smtpUsers.company }}</label>
+        <InputText
+          v-model="company"
+          :placeholder="t.smtpUsers.companyPlaceholder"
+          class="w-full"
+        />
+      </div>
+      <div class="field">
+        <label>{{ t.smtpUsers.service }}</label>
+        <InputText
+          v-model="service"
+          :placeholder="t.smtpUsers.servicePlaceholder"
+          class="w-full"
+        />
       </div>
       <div class="actions">
         <Button type="submit" :label="t.common.save" icon="pi pi-check" />

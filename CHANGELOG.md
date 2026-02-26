@@ -4,6 +4,16 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.3.1] - 2026-02-26
+
+### Hinzugefuegt
+- **Firma & Dienst fuer SMTP-Benutzer** - Optionale Felder "Firma" und "Dienst" zur Zuordnung von SMTP-Zugaengen zu Unternehmen und Anwendungszwecken
+  - Beim Anlegen eines SMTP-Benutzers koennen Firma und Dienst angegeben werden
+  - Nachtraegliche Inline-Bearbeitung direkt in der Tabelle (Klick auf Zelle → Eingabefeld → Enter/Blur speichert)
+  - PDF-Konfigurationsblatt zeigt Zuordnungs-Abschnitt (Firma/Dienst) wenn vorhanden
+- Alembic-Migration 005: `company` und `service` Spalten in `smtp_users`
+- `PUT /api/smtp-users/{id}` akzeptiert jetzt auch `company` und `service`
+
 ## [1.3.0] - 2026-02-25
 
 ### Hinzugefuegt

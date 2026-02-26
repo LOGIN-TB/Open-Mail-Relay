@@ -131,8 +131,9 @@ Neben der IP-basierten Autorisierung koennen SMTP-Benutzer angelegt werden, die 
 
 1. Im Admin-Panel unter **SMTP-Benutzer** → **SMTP-Benutzer anlegen**
 2. Benutzernamen eingeben (4-16 Zeichen: Buchstaben, Ziffern, Bindestrich und Unterstrich; Gross/Kleinschreibung egal)
-3. Das Passwort wird automatisch generiert und angezeigt
-4. **PDF-Konfigurationsblatt herunterladen** mit allen Zugangsdaten und Einrichtungsanleitung
+3. Optional **Firma** und **Dienst** angeben (zur Zuordnung des Zugangs). Diese Felder koennen auch nachtraeglich direkt in der Tabelle per Klick bearbeitet werden
+4. Das Passwort wird automatisch generiert und angezeigt
+5. **PDF-Konfigurationsblatt herunterladen** mit allen Zugangsdaten, Zuordnung und Einrichtungsanleitung
 
 > **Hinweis:** Auf Port 587 ist TLS Pflicht - Zugangsdaten werden immer verschluesselt uebertragen. Auf Port 25 ist SMTP-Auth auch ohne TLS moeglich, damit aeltere Geraete ohne TLS-Unterstuetzung den Relay nutzen koennen. Empfehlung: Port 587 verwenden, wenn moeglich.
 

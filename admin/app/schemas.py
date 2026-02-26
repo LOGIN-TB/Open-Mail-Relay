@@ -161,6 +161,8 @@ class RetentionUpdate(BaseModel):
 
 class SmtpUserCreate(BaseModel):
     username: str
+    company: str | None = None
+    service: str | None = None
 
     @field_validator("username")
     @classmethod
@@ -175,6 +177,8 @@ class SmtpUserOut(BaseModel):
     id: int
     username: str
     is_active: bool
+    company: str | None = None
+    service: str | None = None
     created_at: datetime | None = None
     created_by: int | None = None
 
@@ -187,6 +191,8 @@ class SmtpUserWithPassword(SmtpUserOut):
 
 class SmtpUserUpdate(BaseModel):
     is_active: bool | None = None
+    company: str | None = None
+    service: str | None = None
 
 
 # --- Audit ---

@@ -161,6 +161,10 @@ export default {
     userUpdated: 'SMTP-Benutzer aktualisiert',
     userDeleted: 'SMTP-Benutzer geloescht',
     passwordRegenerated: 'Neues Passwort generiert',
+    company: 'Firma',
+    service: 'Dienst',
+    companyPlaceholder: 'z.B. Musterfirma GmbH',
+    servicePlaceholder: 'z.B. Newsletter, Webshop',
     noUsers: 'Keine SMTP-Benutzer vorhanden',
   },
   throttling: {
