@@ -43,7 +43,7 @@ function formatTime(ts: string): string {
 
 function sourceDisplay(event: { sasl_username: string | null; client_ip: string | null; status: string }) {
   if (event.status === 'auth_failed' && event.client_ip) {
-    return { text: event.sasl_username ? `${event.client_ip} (${event.sasl_username})` : event.client_ip, cssClass: 'source-auth-failed', icon: 'pi-shield' }
+    return { text: event.client_ip, cssClass: 'source-auth-failed', icon: 'pi-shield' }
   }
   if (event.sasl_username) {
     return { text: event.sasl_username, cssClass: 'source-smtp', icon: 'pi-user' }
@@ -89,6 +89,9 @@ function sourceDisplay(event: { sasl_username: string | null; client_ip: string 
                   {{ sourceDisplay(event).text }}
                 </span>
                 <span v-else>-</span>
+                <span v-if="event.status === 'auth_failed' && event.sasl_username" class="source-badge source-attempted-user">
+                  <i class="pi pi-user"></i> {{ event.sasl_username }}
+                </span>
                 <span v-if="event.client_ip && bannedIps?.has(event.client_ip)" class="source-badge source-banned">
                   <i class="pi pi-ban"></i> {{ t.ipBans.banned }}
                 </span>
@@ -262,6 +265,11 @@ function sourceDisplay(event: { sasl_username: string | null; client_ip: string 
 .source-auth-failed {
   background: #fecaca;
   color: #7f1d1d;
+}
+
+.source-attempted-user {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .source-banned {
