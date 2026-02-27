@@ -4,6 +4,18 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.4.2] - 2026-02-27
+
+### Behoben
+- **Stats-Collector und Logging komplett ausgefallen** - Alembics `fileConfig()` deaktivierte beim Start alle `app.*`-Logger (Standard: `disable_existing_loggers=True`). Dadurch lief der Stats-Collector zwar, aber alle Log-Ausgaben inkl. Fehlermeldungen wurden verschluckt. Dashboard, Protokolle und SMTP-User "Letzte Nutzung" wurden nicht mehr aktualisiert.
+  - `alembic/env.py`: `disable_existing_loggers=False` gesetzt
+  - `main.py`: Logging-Setup nach Alembic-Migrations verschoben, deaktivierte Logger werden explizit reaktiviert
+  - `app_logger.propagate = False` verhindert doppelte Log-Ausgabe
+- **Log-Parser Regex korrigiert** - Komma/Whitespace-Matching in `STATUS_RE` und `FROM_RE` an echtes Postfix-Log-Format angepasst
+- **Stats-Collector Performance** - Batch-Verarbeitung von bis zu 200 Zeilen pro Zyklus (statt einzeln), Poll-Intervall auf 0.2s reduziert
+- **Ban-Service Rolling-Window** - Fehlversuche werden bei Fenster-Ablauf halbiert statt zurueckgesetzt, damit hartnäckige Angreifer kumulativ gesperrt werden
+- **PYTHONUNBUFFERED=1** im Dockerfile fuer sofortige Log-Ausgabe
+
 ## [1.4.1] - 2026-02-26
 
 ### Hinzugefuegt
