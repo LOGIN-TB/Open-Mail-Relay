@@ -4,6 +4,18 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.5.1] - 2026-02-27
+
+### Hinzugefuegt
+- **Zweisprachige Abuse-Seite (DE/EN)** - Die oeffentliche Abuse- & Postmaster-Seite unterstuetzt jetzt Deutsch und Englisch
+  - Sprachwechsel-Buttons im Header (DE | EN)
+  - Sprachauswahl wird im Browser gespeichert (localStorage)
+  - CSS-basiertes Umschalten — kein Seitenreload noetig
+  - Standardsprache: Deutsch
+- **Zweisprachige Admin-Felder** - Die drei editierbaren Textfelder (Datenhaltung, Spam-Filterung, RFC 2142) haben jetzt jeweils eine DE- und EN-Variante
+  - Neue Felder im Admin-Panel: Datenhaltung (EN), Spam-Filterung (EN), RFC 2142 (EN)
+  - Englische Vorschlagstexte als Standard (GDPR compliant, SPF/DKIM/DMARC, RFC 2142)
+
 ## [1.5.0] - 2026-02-27
 
 ### Hinzugefuegt

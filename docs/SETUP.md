@@ -191,7 +191,7 @@ Wenn die Drosselung aktiv ist, zeigt das Dashboard eine Warmup-Statuskarte mit P
 
 ## 8. Abuse-Seite konfigurieren (empfohlen)
 
-Unter dem Mail-Hostnamen (z.B. `https://relay.example.com`) ist eine oeffentliche Abuse- & Postmaster-Infoseite erreichbar. Diese Seite erfuellt die Anforderungen von RFC 2142 und stellt Kontaktinformationen fuer Postmaster, Netzwerkbetreiber und Behoerden bereit.
+Unter dem Mail-Hostnamen (z.B. `https://relay.example.com`) ist eine oeffentliche Abuse- & Postmaster-Infoseite erreichbar. Diese Seite erfuellt die Anforderungen von RFC 2142 und stellt Kontaktinformationen fuer Postmaster, Netzwerkbetreiber und Behoerden bereit. Die Seite ist zweisprachig (Deutsch/Englisch) mit Sprachwechsel-Buttons im Header.
 
 ### Standard-Werte
 
@@ -201,9 +201,12 @@ Nach der Installation werden automatisch Standardwerte aus dem Hostnamen abgelei
 |------|----------|
 | Abuse-E-Mail | `abuse@{domain}` |
 | Postmaster-E-Mail | `postmaster@{domain}` |
-| Datenhaltung | Vorschlagstext (DSGVO-konform) |
-| Spam-Filterung | Vorschlagstext (SPF/DKIM/DMARC) |
-| RFC 2142 | Vorschlagstext |
+| Datenhaltung (DE) | Vorschlagstext (DSGVO-konform) |
+| Datenhaltung (EN) | Vorschlagstext (GDPR compliant) |
+| Spam-Filterung (DE) | Vorschlagstext (SPF/DKIM/DMARC) |
+| Spam-Filterung (EN) | Vorschlagstext (SPF/DKIM/DMARC) |
+| RFC 2142 (DE) | Vorschlagstext |
+| RFC 2142 (EN) | Vorschlagstext |
 
 ### Anpassen
 
@@ -213,8 +216,9 @@ Im Admin-Panel unter **Konfiguration** → **Abuse-Seite**:
 2. **Telefon** angeben (optional, fuer Geschaeftszeiten)
 3. **Impressum-URL** hinterlegen (optional, Link zur Unternehmensseite)
 4. Abuse-E-Mail und Postmaster-E-Mail pruefen und ggf. anpassen
-5. Texte fuer Datenhaltung, Spam-Filterung und RFC 2142 anpassen
+5. Texte fuer Datenhaltung, Spam-Filterung und RFC 2142 anpassen (jeweils DE und EN)
 6. Speichern und per **Vorschau oeffnen** die Seite pruefen
+7. Auf der Abuse-Seite per **DE | EN**-Buttons die Sprache wechseln (wird im Browser gespeichert)
 
 > **Hinweis:** Die Abuse-Seite ist oeffentlich zugaenglich (ohne Login). Hostname und Domain werden automatisch aus `postfix/main.cf` abgeleitet und koennen nicht auf der Abuse-Seite geaendert werden.
 
