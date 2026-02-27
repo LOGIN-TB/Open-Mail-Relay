@@ -7,6 +7,7 @@ import TlsStatusCard from '../components/config/TlsStatus.vue'
 import ConnectionInfoCard from '../components/config/ConnectionInfo.vue'
 import RetentionSettings from '../components/config/RetentionSettings.vue'
 import TimezoneSettings from '../components/config/TimezoneSettings.vue'
+import AbusePageSettings from '../components/config/AbusePageSettings.vue'
 import t from '../i18n/de'
 
 const toast = useToast()
@@ -107,6 +108,8 @@ onMounted(fetchConfig)
       <RetentionSettings />
       <TimezoneSettings />
     </div>
+
+    <AbusePageSettings />
   </div>
 </template>
 

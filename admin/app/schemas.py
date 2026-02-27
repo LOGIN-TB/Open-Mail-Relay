@@ -378,3 +378,29 @@ class IpBanSettings(BaseModel):
     max_attempts: int = 5
     time_window_minutes: int = 10
     ban_durations: list[int] = [30, 360, 1440, 10080]
+
+
+# --- Abuse Page ---
+
+class AbuseSettings(BaseModel):
+    abuse_email: str = ""
+    postmaster_email: str = ""
+    abuse_responsible: str = ""
+    abuse_phone: str = ""
+    abuse_imprint_url: str = ""
+    abuse_data_retention: str = ""
+    abuse_spam_filtering: str = ""
+    abuse_rfc2142: str = ""
+    hostname: str = ""
+    domain: str = ""
+
+
+class AbuseSettingsUpdate(BaseModel):
+    abuse_email: str | None = None
+    postmaster_email: str | None = None
+    abuse_responsible: str | None = None
+    abuse_phone: str | None = None
+    abuse_imprint_url: str | None = None
+    abuse_data_retention: str | None = None
+    abuse_spam_filtering: str | None = None
+    abuse_rfc2142: str | None = None

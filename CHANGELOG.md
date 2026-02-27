@@ -4,6 +4,40 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.5.0] - 2026-02-27
+
+### Hinzugefuegt
+- **Oeffentliche Abuse- & Postmaster-Seite** - Unter dem Mail-Hostnamen (z.B. `https://relay2.spamgo.de`) ist eine professionelle Abuse/Postmaster-Infoseite erreichbar (RFC 2142 konform)
+  - Dark-Theme mit IBM Plex Fonts und responsivem Layout
+  - Kontaktblock mit Abuse-E-Mail, Postmaster-E-Mail, Verantwortlichem und Telefon
+  - Karten fuer Missbrauchsmeldung, Postmaster-Anfragen, Behoerden und Impressum
+  - Systeminformationen-Tabelle (Betreiber, Hostname, Nutzungspolitik, SPF/DKIM, Spam-Filterung, Datenhaltung, RFC 2142)
+  - Hinweis-Box fuer ISPs und grosse Mailprovider
+  - Alle Werte sind HTML-escaped (XSS-Schutz)
+- **Admin-pflegbare Abuse-Einstellungen** - Neue Karte "Abuse-Seite" auf der Konfigurationsseite
+  - Abuse-E-Mail (Standard: `abuse@{domain}`)
+  - Postmaster-E-Mail (Standard: `postmaster@{domain}`)
+  - Verantwortlicher / Betreiber
+  - Telefon
+  - Impressum-URL
+  - Texte fuer Datenhaltung, Spam-Filterung und RFC 2142 Konformitaet (mit Vorschlagstexten)
+  - Hostname und Domain werden aus `postfix/main.cf` abgeleitet (read-only)
+  - Vorschau-Button oeffnet die Abuse-Seite im neuen Tab
+- Neue API-Endpunkte:
+  - `GET /public/abuse` — Oeffentliche Abuse-Seite (HTML, kein Auth)
+  - `GET /api/abuse-settings` — Abuse-Einstellungen lesen (Auth erforderlich)
+  - `PUT /api/abuse-settings` — Abuse-Einstellungen aendern (Auth erforderlich)
+- Audit-Logging fuer Abuse-Einstellungs-Aenderungen
+- Optionale Felder (Verantwortlicher, Telefon, Impressum-URL) werden nur angezeigt wenn konfiguriert
+
+### Geaendert
+- **Caddy-Konfiguration** — Mail-Hostname wird jetzt per `rewrite + reverse_proxy` an das Admin-Panel weitergeleitet (statt `respond "Open Mail Relay Server"`)
+- Einstellungen werden in der bestehenden `system_settings`-Tabelle gespeichert (keine Migration noetig)
+
+### Behoben
+- **Auth-Failed Quellen-Badge** — IP und versuchter Benutzername werden als separate Badges dargestellt (statt zusammen in einem abgeschnittenen Badge)
+- **Dashboard Aktivitaetstabelle** — Horizontales Scrollen und Badge-Breite an Protokoll-Ansicht angepasst
+
 ## [1.4.2] - 2026-02-27
 
 ### Behoben

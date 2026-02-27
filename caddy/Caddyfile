@@ -7,5 +7,6 @@
 }
 
 {$MAIL_HOSTNAME} {
-	respond "Open Mail Relay Server" 200
+	rewrite * /public/abuse
+	reverse_proxy admin-panel:8000
 }

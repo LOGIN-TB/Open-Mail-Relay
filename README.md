@@ -16,6 +16,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
 - **Echtzeit-Monitoring** - Dashboard mit Zustellstatistiken, Queue-Status, Aktivitaetslog und Verlaufsdiagramm
 - **Quellenverfolgung** - Jedes Mail-Event zeigt Client-IP und SMTP-Benutzer mit farbcodierten Badges (Protokoll + Dashboard)
 - **Konfigurierbare Zeitzone** - Zeitzone fuer die Anzeige aller Zeitstempel im Admin-Panel einstellbar (intern bleibt alles UTC). Container-Zeitzone per `TZ` Umgebungsvariable konfigurierbar
+- **Oeffentliche Abuse-Seite** - Professionelle Abuse- & Postmaster-Infoseite unter dem Mail-Hostnamen (RFC 2142 konform), mit admin-pflegbaren Kontaktdaten, Systeminformationen und Impressum-Link
 - **Einklappbare Seitenleiste** - Sidebar per Toggle-Button ein-/ausklappbar, Zustand wird gespeichert
 - **Docker-basiert** - Drei Container (Caddy, Admin-Panel, Open-Mail-Relay), einfach zu deployen
 
@@ -27,7 +28,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
                     │                                         │
   HTTPS :443 ──────┤──► Caddy (Reverse Proxy + Auto-TLS)     │
   HTTP  :80  ──────┤──►   ├── admin.example.com ──► Admin    │
-                    │      └── mail.example.com  ──► (Info)   │
+                    │      └── mail.example.com  ──► Abuse    │
                     │                                         │
   SMTP  :25  ──────┤──► Postfix Open Mail Relay                   │
   Sub.  :587 ──────┤──►   ├── STARTTLS (optional / erzwungen)│
@@ -117,6 +118,7 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - Verbindungseinstellungen zum Kopieren (SMTP-Host, Ports, TLS-Status)
 - Manuelle Zertifikat-Synchronisierung und Postfix-Reload
 - **Zeitzone** konfigurierbar fuer alle Zeitstempel-Anzeigen im Admin-Panel (Standard: Europe/Berlin)
+- **Abuse-Seite** — Pflege der oeffentlichen Abuse- & Postmaster-Informationsseite (Kontaktdaten, Systeminformationen, Texte). Vorschau-Link oeffnet die Seite direkt
 
 ### SMTP-Benutzer (SASL)
 - SMTP-Benutzer anlegen, aktivieren/deaktivieren, loeschen

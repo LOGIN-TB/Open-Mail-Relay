@@ -17,6 +17,7 @@ from app.routers import auth_router, dashboard_router, network_router, config_ro
 from app.routers import smtp_users_router
 from app.routers import throttle_router
 from app.routers import ip_bans_router
+from app.routers.abuse_router import public_router as abuse_public_router, admin_router as abuse_admin_router
 from app.services.stats_collector import StatsCollector
 from app.services.sasl_service import sync_dovecot_users
 from app.services.policy_server import PolicyServer
@@ -230,6 +231,10 @@ app.include_router(logs_router.router, prefix="/api/logs", tags=["logs"])
 app.include_router(smtp_users_router.router, prefix="/api/smtp-users", tags=["smtp-users"])
 app.include_router(throttle_router.router, prefix="/api/throttling", tags=["throttling"])
 app.include_router(ip_bans_router.router, prefix="/api/ip-bans", tags=["ip-bans"])
+app.include_router(abuse_admin_router, prefix="/api/abuse-settings", tags=["abuse-settings"])
+
+# Public abuse page (must be before the SPA catch-all)
+app.include_router(abuse_public_router, tags=["public"])
 
 # Serve Vue.js SPA
 static_dir = Path("/app/static")

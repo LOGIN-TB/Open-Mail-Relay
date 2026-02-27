@@ -189,7 +189,36 @@ Wenn die Drosselung aktiv ist, zeigt das Dashboard eine Warmup-Statuskarte mit P
 - **Fail-Open-Design**: Der Policy-Server gibt bei Fehler oder Timeout immer DUNNO zurueck — Mails werden nie durch einen Bug blockiert
 - Bei Deaktivierung der Drosselung werden alle gehaltenen Mails sofort freigegeben
 
-## 8. Sendenden Server konfigurieren
+## 8. Abuse-Seite konfigurieren (empfohlen)
+
+Unter dem Mail-Hostnamen (z.B. `https://relay.example.com`) ist eine oeffentliche Abuse- & Postmaster-Infoseite erreichbar. Diese Seite erfuellt die Anforderungen von RFC 2142 und stellt Kontaktinformationen fuer Postmaster, Netzwerkbetreiber und Behoerden bereit.
+
+### Standard-Werte
+
+Nach der Installation werden automatisch Standardwerte aus dem Hostnamen abgeleitet:
+
+| Feld | Standard |
+|------|----------|
+| Abuse-E-Mail | `abuse@{domain}` |
+| Postmaster-E-Mail | `postmaster@{domain}` |
+| Datenhaltung | Vorschlagstext (DSGVO-konform) |
+| Spam-Filterung | Vorschlagstext (SPF/DKIM/DMARC) |
+| RFC 2142 | Vorschlagstext |
+
+### Anpassen
+
+Im Admin-Panel unter **Konfiguration** → **Abuse-Seite**:
+
+1. **Verantwortlicher / Betreiber** eintragen (z.B. Firmenname und Standort)
+2. **Telefon** angeben (optional, fuer Geschaeftszeiten)
+3. **Impressum-URL** hinterlegen (optional, Link zur Unternehmensseite)
+4. Abuse-E-Mail und Postmaster-E-Mail pruefen und ggf. anpassen
+5. Texte fuer Datenhaltung, Spam-Filterung und RFC 2142 anpassen
+6. Speichern und per **Vorschau oeffnen** die Seite pruefen
+
+> **Hinweis:** Die Abuse-Seite ist oeffentlich zugaenglich (ohne Login). Hostname und Domain werden automatisch aus `postfix/main.cf` abgeleitet und koennen nicht auf der Abuse-Seite geaendert werden.
+
+## 9. Sendenden Server konfigurieren
 
 Auf dem Server, der Mails ueber das Relay versenden soll, die SMTP-Einstellungen konfigurieren:
 
@@ -271,7 +300,7 @@ Datei `/etc/postfix/sasl_passwd`:
 
 Danach: `postmap /etc/postfix/sasl_passwd && chmod 600 /etc/postfix/sasl_passwd*`
 
-## 9. Testen
+## 10. Testen
 
 ### swaks installieren
 
@@ -424,6 +453,7 @@ docker compose logs -f
 | SMTP-Benutzer (Passwoerter verschluesselt) | Docker Volume `admin-data` (SQLite) | Ja |
 | Drosselungs-Konfiguration (Phasen, Transports) | Docker Volume `admin-data` (SQLite) | Ja |
 | Zeitzonen-Einstellung | Docker Volume `admin-data` (SQLite) | Ja |
+| Abuse-Seite Einstellungen | Docker Volume `admin-data` (SQLite) | Ja |
 | Dovecot passwd-Datei (`postfix/dovecot-users`) | Lokale Datei (gitignored) | Wird aus DB regeneriert |
 | Umgebungsvariablen (`.env`) | Lokale Datei (gitignored) | Ja |
 
