@@ -152,6 +152,7 @@ function sourceDisplay(event: { sasl_username: string | null; client_ip: string 
 .table-scroll {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;
   min-height: 0;
 }
 
@@ -232,7 +233,7 @@ function sourceDisplay(event: { sasl_username: string | null; client_ip: string 
   font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
-  max-width: 140px;
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
