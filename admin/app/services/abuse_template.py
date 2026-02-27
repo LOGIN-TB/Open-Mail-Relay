@@ -1,4 +1,4 @@
-"""Self-contained HTML template for the public Abuse & Postmaster page."""
+"""Self-contained HTML template for the public Abuse & Postmaster page (DE/EN)."""
 
 ABUSE_HTML_TEMPLATE = """\
 <!DOCTYPE html>
@@ -65,8 +65,34 @@ ABUSE_HTML_TEMPLATE = """\
       font-family: 'IBM Plex Mono', monospace;
       font-size: 0.85rem;
       color: var(--muted);
+      flex: 1;
     }}
     .header-title span {{
+      color: var(--text);
+    }}
+    .lang-switch {{
+      display: flex;
+      gap: 0;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+    }}
+    .lang-btn {{
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }}
+    .lang-btn:first-child {{ border-radius: 4px 0 0 4px; }}
+    .lang-btn:last-child {{ border-radius: 0 4px 4px 0; border-left: none; }}
+    .lang-btn.active {{
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }}
+    .lang-btn:hover:not(.active) {{
+      border-color: var(--accent);
       color: var(--text);
     }}
     main {{
@@ -290,27 +316,59 @@ ABUSE_HTML_TEMPLATE = """\
       color: var(--muted);
     }}
     footer a {{ color: var(--accent); text-decoration: none; }}
+    /* Language visibility */
+    [data-lang] {{ display: none; }}
+    html[lang="de"] [data-lang="de"] {{ display: revert; }}
+    html[lang="en"] [data-lang="en"] {{ display: revert; }}
+    /* For inline elements like span */
+    span[data-lang] {{ display: none; }}
+    html[lang="de"] span[data-lang="de"] {{ display: inline; }}
+    html[lang="en"] span[data-lang="en"] {{ display: inline; }}
+    /* For table rows */
+    tr[data-lang] {{ display: none; }}
+    html[lang="de"] tr[data-lang="de"] {{ display: table-row; }}
+    html[lang="en"] tr[data-lang="en"] {{ display: table-row; }}
+    /* For flex/grid items like contact-items and cards */
+    .contact-item[data-lang] {{ display: none; }}
+    html[lang="de"] .contact-item[data-lang="de"] {{ display: block; }}
+    html[lang="en"] .contact-item[data-lang="en"] {{ display: block; }}
   </style>
 </head>
 <body>
 <header>
   <div class="logo-badge">OPEN MAIL RELAY</div>
-  <span class="header-title">{hostname} &nbsp;/&nbsp; <span>Abuse &amp; Postmaster</span></span>
+  <span class="header-title">{hostname} &nbsp;/&nbsp; <span data-lang="de">Abuse &amp; Postmaster</span><span data-lang="en">Abuse &amp; Postmaster</span></span>
+  <div class="lang-switch">
+    <button class="lang-btn active" onclick="setLang('de')" id="btn-de">DE</button>
+    <button class="lang-btn" onclick="setLang('en')" id="btn-en">EN</button>
+  </div>
 </header>
 <main>
-  <div class="page-eyebrow">Postmaster Information</div>
-  <h1>Abuse &amp; <em>Kontakt</em></h1>
-  <p class="intro">
+  <div class="page-eyebrow" data-lang="de">Postmaster Information</div>
+  <div class="page-eyebrow" data-lang="en">Postmaster Information</div>
+
+  <h1 data-lang="de">Abuse &amp; <em>Kontakt</em></h1>
+  <h1 data-lang="en">Abuse &amp; <em>Contact</em></h1>
+
+  <p class="intro" data-lang="de">
     Diese Seite richtet sich an Postmaster, Netzwerkbetreiber und Behoerden, die
     Missbrauchsmeldungen zu E-Mails einreichen moechten, die ueber das Relay-System
-    <strong>{hostname}</strong>{responsible_intro} versandt wurden.
+    <strong>{hostname}</strong>{responsible_intro_de} versandt wurden.
   </p>
+  <p class="intro" data-lang="en">
+    This page is intended for postmasters, network operators and authorities who
+    wish to submit abuse reports regarding emails sent through the relay system
+    <strong>{hostname}</strong>{responsible_intro_en}.
+  </p>
+
   <div class="status-row">
     <div class="status-dot"></div>
-    <span class="status-text">Abuse-Postfach aktiv &ndash; Reaktionszeit &lt; 24h (Werktage)</span>
+    <span class="status-text" data-lang="de">Abuse-Postfach aktiv &ndash; Reaktionszeit &lt; 24h (Werktage)</span>
+    <span class="status-text" data-lang="en">Abuse mailbox active &ndash; response time &lt; 24h (business days)</span>
   </div>
 
-  <div class="contact-block">
+  <!-- Contact block DE -->
+  <div class="contact-block" data-lang="de">
     <h2>Direkter Abuse-Kontakt</h2>
     <div class="contact-grid">
       <div class="contact-item">
@@ -321,11 +379,28 @@ ABUSE_HTML_TEMPLATE = """\
         <label>Postmaster E-Mail</label>
         <div class="value"><a href="mailto:{postmaster_email}">{postmaster_email}</a></div>
       </div>
-{responsible_section}{phone_section}
+{responsible_section_de}{phone_section_de}
     </div>
   </div>
 
-  <div class="cards">
+  <!-- Contact block EN -->
+  <div class="contact-block" data-lang="en">
+    <h2>Direct Abuse Contact</h2>
+    <div class="contact-grid">
+      <div class="contact-item">
+        <label>Abuse Email</label>
+        <div class="value"><a href="mailto:{abuse_email}">{abuse_email}</a></div>
+      </div>
+      <div class="contact-item">
+        <label>Postmaster Email</label>
+        <div class="value"><a href="mailto:{postmaster_email}">{postmaster_email}</a></div>
+      </div>
+{responsible_section_en}{phone_section_en}
+    </div>
+  </div>
+
+  <!-- Cards DE -->
+  <div class="cards" data-lang="de">
     <div class="card">
       <div class="card-icon">&#x1F4E8;</div>
       <h3>Missbrauchsmeldung einreichen</h3>
@@ -348,14 +423,43 @@ ABUSE_HTML_TEMPLATE = """\
       <div class="card-icon">&#x1F517;</div>
       <h3>Impressum &amp; Datenschutz</h3>
       <p>Vollstaendiges Impressum mit Verantwortlichem sowie Datenschutzerklaerung gemaess DSGVO.</p>
-      {imprint_link}
+      {imprint_link_de}
     </div>
   </div>
 
-  <div class="contact-block">
+  <!-- Cards EN -->
+  <div class="cards" data-lang="en">
+    <div class="card">
+      <div class="card-icon">&#x1F4E8;</div>
+      <h3>Submit Abuse Report</h3>
+      <p>Please send complete email headers (including Received lines) along with a brief description of the incident to our abuse address.</p>
+      <a href="mailto:{abuse_email}?subject=Abuse-Report%20{hostname}">&rarr; {abuse_email}</a>
+    </div>
+    <div class="card">
+      <div class="card-icon">&#x1F4CB;</div>
+      <h3>Postmaster Inquiries</h3>
+      <p>For technical inquiries about mail flows, reputation resets or whitelisting requests, please contact the postmaster.</p>
+      <a href="mailto:{postmaster_email}?subject=Postmaster-Inquiry%20{hostname}">&rarr; {postmaster_email}</a>
+    </div>
+    <div class="card">
+      <div class="card-icon">&#x2696;&#xFE0F;</div>
+      <h3>Law Enforcement</h3>
+      <p>Requests from authorities and law enforcement agencies are processed in accordance with applicable German law.</p>
+      <a href="mailto:{abuse_email}?subject=Law-Enforcement-Request%20{hostname}">&rarr; Submit request</a>
+    </div>
+    <div class="card">
+      <div class="card-icon">&#x1F517;</div>
+      <h3>Legal Notice &amp; Privacy</h3>
+      <p>Full legal notice and privacy policy in accordance with GDPR.</p>
+      {imprint_link_en}
+    </div>
+  </div>
+
+  <!-- Tech info DE -->
+  <div class="contact-block" data-lang="de">
     <h2>Systeminformationen</h2>
     <table class="tech-table">
-{responsible_row}
+{responsible_row_de}
       <tr>
         <td>Hostname</td>
         <td>{hostname}</td>
@@ -387,18 +491,73 @@ ABUSE_HTML_TEMPLATE = """\
     </table>
   </div>
 
-  <div class="info-box">
+  <!-- Tech info EN -->
+  <div class="contact-block" data-lang="en">
+    <h2>System Information</h2>
+    <table class="tech-table">
+{responsible_row_en}
+      <tr>
+        <td>Hostname</td>
+        <td>{hostname}</td>
+      </tr>
+      <tr>
+        <td>Purpose</td>
+        <td>Managed mail relay / smarthost for authorized networks and SMTP users</td>
+      </tr>
+      <tr>
+        <td>Usage Policy</td>
+        <td>Authorized networks and SMTP users only; not an open relay</td>
+      </tr>
+      <tr>
+        <td>SPF / DKIM</td>
+        <td>Yes &ndash; all relayed mail is verified</td>
+      </tr>
+      <tr>
+        <td>Spam Filtering</td>
+        <td>{abuse_spam_filtering_en}</td>
+      </tr>
+      <tr>
+        <td>Data Retention</td>
+        <td>{abuse_data_retention_en}</td>
+      </tr>
+      <tr>
+        <td>RFC 2142</td>
+        <td>{abuse_rfc2142_en}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="info-box" data-lang="de">
     <strong>Hinweis fuer ISPs und grosse Mailprovider:</strong> Bei Blocklisten-Eintraegen
     oder Reputationsproblemen kontaktieren Sie uns bitte direkt unter
     <a href="mailto:{postmaster_email}">{postmaster_email}</a>.
     Wir reagieren auf verifizierte Meldungen innerhalb eines Werktages und leiten
     umgehend Massnahmen gegen missbraeuchlich nutzende Kunden ein.
   </div>
+  <div class="info-box" data-lang="en">
+    <strong>Notice for ISPs and large mail providers:</strong> For blocklist entries
+    or reputation issues, please contact us directly at
+    <a href="mailto:{postmaster_email}">{postmaster_email}</a>.
+    We respond to verified reports within one business day and immediately take
+    action against abusive customers.
+  </div>
 </main>
 <footer>
   <p>{footer_left}</p>
   <p>{abuse_email} &middot; {postmaster_email}</p>
 </footer>
+<script>
+function setLang(lang) {{
+  document.documentElement.lang = lang;
+  document.getElementById('btn-de').classList.toggle('active', lang === 'de');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  try {{ localStorage.setItem('abuse-lang', lang); }} catch(e) {{}}
+}}
+try {{
+  var saved = localStorage.getItem('abuse-lang');
+  if (saved === 'en') setLang('en');
+}} catch(e) {{}}
+</script>
 </body>
 </html>
 """

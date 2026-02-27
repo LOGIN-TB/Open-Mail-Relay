@@ -15,6 +15,9 @@ interface AbuseSettings {
   abuse_data_retention: string
   abuse_spam_filtering: string
   abuse_rfc2142: string
+  abuse_data_retention_en: string
+  abuse_spam_filtering_en: string
+  abuse_rfc2142_en: string
   hostname: string
   domain: string
 }
@@ -36,10 +39,12 @@ async function save() {
   saving.value = true
   try {
     const { abuse_email, postmaster_email, abuse_responsible, abuse_phone,
-            abuse_imprint_url, abuse_data_retention, abuse_spam_filtering, abuse_rfc2142 } = settings.value
+            abuse_imprint_url, abuse_data_retention, abuse_spam_filtering, abuse_rfc2142,
+            abuse_data_retention_en, abuse_spam_filtering_en, abuse_rfc2142_en } = settings.value
     const { data } = await api.put('/abuse-settings', {
       abuse_email, postmaster_email, abuse_responsible, abuse_phone,
       abuse_imprint_url, abuse_data_retention, abuse_spam_filtering, abuse_rfc2142,
+      abuse_data_retention_en, abuse_spam_filtering_en, abuse_rfc2142_en,
     })
     settings.value = data
     toast.add({ severity: 'success', summary: t.common.success, detail: t.config.abusePageSaved, life: 3000 })
@@ -95,17 +100,29 @@ function openPreview() {
         <input type="url" v-model="settings.abuse_imprint_url" class="input" placeholder="https://www.example.de/impressum" />
       </div>
 
-      <div class="field full-width">
-        <label>{{ t.config.abuseDataRetention }}</label>
+      <div class="field">
+        <label>{{ t.config.abuseDataRetention }} (DE)</label>
         <textarea v-model="settings.abuse_data_retention" class="input textarea" rows="2"></textarea>
       </div>
-      <div class="field full-width">
-        <label>{{ t.config.abuseSpamFiltering }}</label>
+      <div class="field">
+        <label>{{ t.config.abuseDataRetention }} (EN)</label>
+        <textarea v-model="settings.abuse_data_retention_en" class="input textarea" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label>{{ t.config.abuseSpamFiltering }} (DE)</label>
         <textarea v-model="settings.abuse_spam_filtering" class="input textarea" rows="2"></textarea>
       </div>
-      <div class="field full-width">
-        <label>{{ t.config.abuseRfc2142 }}</label>
+      <div class="field">
+        <label>{{ t.config.abuseSpamFiltering }} (EN)</label>
+        <textarea v-model="settings.abuse_spam_filtering_en" class="input textarea" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label>{{ t.config.abuseRfc2142 }} (DE)</label>
         <textarea v-model="settings.abuse_rfc2142" class="input textarea" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label>{{ t.config.abuseRfc2142 }} (EN)</label>
+        <textarea v-model="settings.abuse_rfc2142_en" class="input textarea" rows="2"></textarea>
       </div>
     </div>
 

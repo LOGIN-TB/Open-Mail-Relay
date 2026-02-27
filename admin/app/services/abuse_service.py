@@ -21,6 +21,9 @@ ALLOWED_KEYS = {
     "abuse_data_retention",
     "abuse_spam_filtering",
     "abuse_rfc2142",
+    "abuse_data_retention_en",
+    "abuse_spam_filtering_en",
+    "abuse_rfc2142_en",
 }
 
 
@@ -41,6 +44,9 @@ def _defaults(domain: str) -> dict[str, str]:
         "abuse_data_retention": "Deutschland, DSGVO-konform. Logs werden 30 Tage gespeichert.",
         "abuse_spam_filtering": "SPF-, DKIM- und DMARC-Pruefung aller ein- und ausgehenden Mails",
         "abuse_rfc2142": "abuse@ und postmaster@ sind gemaess RFC 2142 konfiguriert und aktiv",
+        "abuse_data_retention_en": "Germany, GDPR compliant. Logs are retained for 30 days.",
+        "abuse_spam_filtering_en": "SPF, DKIM and DMARC verification of all inbound and outbound mail",
+        "abuse_rfc2142_en": "abuse@ and postmaster@ are configured and active per RFC 2142",
     }
 
 
@@ -86,48 +92,73 @@ def render_abuse_html(db: Session) -> str:
 
     # Intro text: optionally include responsible party name
     if responsible:
-        esc["responsible_intro"] = f" ({responsible})"
+        esc["responsible_intro_de"] = f" ({responsible})"
+        esc["responsible_intro_en"] = f" ({responsible})"
     else:
-        esc["responsible_intro"] = ""
+        esc["responsible_intro_de"] = ""
+        esc["responsible_intro_en"] = ""
 
     # Responsible party in contact grid
     if responsible:
-        esc["responsible_section"] = (
+        esc["responsible_section_de"] = (
             '      <div class="contact-item">\n'
-            "        <label>Verantwortlich</label>\n"
+            '        <label>Verantwortlich</label>\n'
             f'        <div class="value">{responsible}</div>\n'
-            "      </div>\n"
+            '      </div>\n'
+        )
+        esc["responsible_section_en"] = (
+            '      <div class="contact-item">\n'
+            '        <label>Responsible</label>\n'
+            f'        <div class="value">{responsible}</div>\n'
+            '      </div>\n'
         )
     else:
-        esc["responsible_section"] = ""
+        esc["responsible_section_de"] = ""
+        esc["responsible_section_en"] = ""
 
     # Phone in contact grid
     if phone:
-        esc["phone_section"] = (
+        esc["phone_section_de"] = (
             '      <div class="contact-item">\n'
-            "        <label>Telefon (Geschaeftszeiten)</label>\n"
+            '        <label>Telefon (Geschaeftszeiten)</label>\n'
             f'        <div class="value"><a href="tel:{phone}">{phone}</a></div>\n'
-            "      </div>\n"
+            '      </div>\n'
+        )
+        esc["phone_section_en"] = (
+            '      <div class="contact-item">\n'
+            '        <label>Phone (business hours)</label>\n'
+            f'        <div class="value"><a href="tel:{phone}">{phone}</a></div>\n'
+            '      </div>\n'
         )
     else:
-        esc["phone_section"] = ""
+        esc["phone_section_de"] = ""
+        esc["phone_section_en"] = ""
 
     # Impressum link in card
     if imprint_url:
-        esc["imprint_link"] = f'<a href="{imprint_url}">&rarr; Impressum &amp; Datenschutz</a>'
+        esc["imprint_link_de"] = f'<a href="{imprint_url}">&rarr; Impressum &amp; Datenschutz</a>'
+        esc["imprint_link_en"] = f'<a href="{imprint_url}">&rarr; Legal Notice &amp; Privacy Policy</a>'
     else:
-        esc["imprint_link"] = '<span style="font-size:0.8rem;color:var(--muted)">Nicht konfiguriert</span>'
+        esc["imprint_link_de"] = '<span style="font-size:0.8rem;color:var(--muted)">Nicht konfiguriert</span>'
+        esc["imprint_link_en"] = '<span style="font-size:0.8rem;color:var(--muted)">Not configured</span>'
 
     # Responsible row in tech table
     if responsible:
-        esc["responsible_row"] = (
-            "      <tr>\n"
-            "        <td>Betreiber</td>\n"
-            f"        <td>{responsible}</td>\n"
-            "      </tr>\n"
+        esc["responsible_row_de"] = (
+            '      <tr>\n'
+            '        <td>Betreiber</td>\n'
+            f'        <td>{responsible}</td>\n'
+            '      </tr>\n'
+        )
+        esc["responsible_row_en"] = (
+            '      <tr>\n'
+            '        <td>Operator</td>\n'
+            f'        <td>{responsible}</td>\n'
+            '      </tr>\n'
         )
     else:
-        esc["responsible_row"] = ""
+        esc["responsible_row_de"] = ""
+        esc["responsible_row_en"] = ""
 
     # Footer left
     year = datetime.now(timezone.utc).year

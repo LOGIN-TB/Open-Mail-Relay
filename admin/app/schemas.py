@@ -391,6 +391,9 @@ class AbuseSettings(BaseModel):
     abuse_data_retention: str = ""
     abuse_spam_filtering: str = ""
     abuse_rfc2142: str = ""
+    abuse_data_retention_en: str = ""
+    abuse_spam_filtering_en: str = ""
+    abuse_rfc2142_en: str = ""
     hostname: str = ""
     domain: str = ""
 
@@ -404,3 +407,6 @@ class AbuseSettingsUpdate(BaseModel):
     abuse_data_retention: str | None = None
     abuse_spam_filtering: str | None = None
     abuse_rfc2142: str | None = None
+    abuse_data_retention_en: str | None = None
+    abuse_spam_filtering_en: str | None = None
+    abuse_rfc2142_en: str | None = None
