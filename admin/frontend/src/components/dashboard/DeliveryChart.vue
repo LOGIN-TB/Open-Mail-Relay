@@ -21,6 +21,7 @@ const props = defineProps<{
     deferred: number[]
     bounced: number[]
     rejected: number[]
+    auth_failed: number[]
   } | null
 }>()
 
@@ -35,6 +36,7 @@ const chartData = computed(() => {
       { label: t.dashboard.deferred, data: props.data.deferred, backgroundColor: '#f59e0b' },
       { label: t.dashboard.bounced, data: props.data.bounced, backgroundColor: '#ef4444' },
       { label: t.dashboard.rejected, data: props.data.rejected, backgroundColor: '#8b5cf6' },
+      { label: t.dashboard.authFailed, data: props.data.auth_failed, backgroundColor: '#dc2626' },
     ],
   }
 })

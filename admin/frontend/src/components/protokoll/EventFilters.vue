@@ -14,6 +14,7 @@ const store = useProtokollStore()
         <option value="deferred">{{ t.protokoll.deferred }}</option>
         <option value="bounced">{{ t.protokoll.bounced }}</option>
         <option value="rejected">{{ t.protokoll.rejected }}</option>
+        <option value="auth_failed">{{ t.protokoll.authFailed }}</option>
       </select>
 
       <input

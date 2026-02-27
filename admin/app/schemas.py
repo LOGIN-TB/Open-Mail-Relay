@@ -111,6 +111,7 @@ class DashboardStats(BaseModel):
     deferred_today: int = 0
     bounced_today: int = 0
     rejected_today: int = 0
+    auth_failed_today: int = 0
     queue_size: int = 0
     success_rate: float = 0.0
 
@@ -154,6 +155,7 @@ class ChartData(BaseModel):
     deferred: list[int]
     bounced: list[int]
     rejected: list[int]
+    auth_failed: list[int]
 
 
 # --- Protokoll / Events ---

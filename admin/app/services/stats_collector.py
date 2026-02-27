@@ -7,7 +7,7 @@ from queue import Queue, Empty
 from app.database import SessionLocal
 from app.models import MailEvent, SmtpUser, StatsHourly
 from app.services.docker_service import get_mail_container
-from app.services.log_parser import parse_and_enrich, parse_auth_failure
+from app.services.log_parser import parse_and_enrich
 
 logger = logging.getLogger(__name__)
 
@@ -76,10 +76,6 @@ class StatsCollector:
                 while processed < 200:
                     try:
                         line = self._line_queue.get_nowait()
-                        # Check for SASL auth failures (on every line)
-                        fail_ip = parse_auth_failure(line)
-                        if fail_ip:
-                            self._record_ban_failure(fail_ip, "sasl_auth_failed")
                         event = parse_and_enrich(line)
                         if event and event.status:
                             self._store_event(event)
@@ -152,6 +148,8 @@ class StatsCollector:
                 stats.bounced_count += 1
             elif event.status == "rejected":
                 stats.rejected_count += 1
+            elif event.status == "auth_failed":
+                stats.auth_failed_count += 1
 
             # Update last_used_at on SMTP user
             if event.sasl_username:
@@ -164,9 +162,11 @@ class StatsCollector:
 
             db.commit()
 
-            # Record rejected events for ban tracking
+            # Record rejected / auth_failed events for ban tracking
             if event.status == "rejected" and event.client_ip:
                 self._record_ban_failure(event.client_ip, "relay_rejected")
+            elif event.status == "auth_failed" and event.client_ip:
+                self._record_ban_failure(event.client_ip, "sasl_auth_failed")
 
             self._cleanup_old_events(db)
         except Exception as e:

@@ -21,6 +21,7 @@ function statusClass(status: string): string {
     deferred: 'status-deferred',
     bounced: 'status-bounced',
     rejected: 'status-rejected',
+    auth_failed: 'status-auth-failed',
   }
   return map[status] ?? ''
 }
@@ -31,6 +32,7 @@ function statusLabel(status: string): string {
     deferred: t.protokoll.deferred,
     bounced: t.protokoll.bounced,
     rejected: t.protokoll.rejected,
+    auth_failed: t.protokoll.authFailed,
   }
   return map[status] ?? status
 }
@@ -40,6 +42,9 @@ function formatTime(ts: string): string {
 }
 
 function sourceDisplay(event: { sasl_username: string | null; client_ip: string | null; status: string }) {
+  if (event.status === 'auth_failed' && event.client_ip) {
+    return { text: event.sasl_username ? `${event.client_ip} (${event.sasl_username})` : event.client_ip, cssClass: 'source-auth-failed', icon: 'pi-shield' }
+  }
   if (event.sasl_username) {
     return { text: event.sasl_username, cssClass: 'source-smtp', icon: 'pi-user' }
   }
@@ -217,6 +222,7 @@ function sourceDisplay(event: { sasl_username: string | null; client_ip: string 
 .status-deferred { background: #fef3c7; color: #92400e; }
 .status-bounced { background: #fee2e2; color: #991b1b; }
 .status-rejected { background: #ede9fe; color: #5b21b6; }
+.status-auth-failed { background: #fecaca; color: #7f1d1d; }
 
 /* Source badges */
 .source-badge {
@@ -251,6 +257,11 @@ function sourceDisplay(event: { sasl_username: string | null; client_ip: string 
 .source-rejected {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.source-auth-failed {
+  background: #fecaca;
+  color: #7f1d1d;
 }
 
 .source-banned {

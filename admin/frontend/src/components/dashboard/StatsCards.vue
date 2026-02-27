@@ -7,6 +7,7 @@ defineProps<{
     deferred_today: number
     bounced_today: number
     rejected_today: number
+    auth_failed_today: number
     queue_size: number
     success_rate: number
   } | null
@@ -18,6 +19,7 @@ const cards = [
   { key: 'deferred_today', label: t.dashboard.deferred, icon: 'pi pi-clock', color: '#f59e0b' },
   { key: 'bounced_today', label: t.dashboard.bounced, icon: 'pi pi-times-circle', color: '#ef4444' },
   { key: 'rejected_today', label: t.dashboard.rejected, icon: 'pi pi-ban', color: '#8b5cf6' },
+  { key: 'auth_failed_today', label: t.dashboard.authFailed, icon: 'pi pi-shield', color: '#dc2626' },
   { key: 'queue_size', label: t.dashboard.queue, icon: 'pi pi-list', color: '#3b82f6' },
   { key: 'success_rate', label: t.dashboard.successRate, icon: 'pi pi-check-circle', color: '#06b6d4', suffix: '%' },
 ]

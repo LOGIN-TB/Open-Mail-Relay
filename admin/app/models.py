@@ -59,7 +59,7 @@ class MailEvent(Base):
     queue_id = Column(String, index=True)
     sender = Column(String)
     recipient = Column(String)
-    status = Column(String, nullable=False, index=True)  # sent, deferred, bounced, rejected
+    status = Column(String, nullable=False, index=True)  # sent, deferred, bounced, rejected, auth_failed
     relay = Column(String)
     delay = Column(Float)
     dsn = Column(String)
@@ -78,6 +78,7 @@ class StatsHourly(Base):
     deferred_count = Column(Integer, default=0)
     bounced_count = Column(Integer, default=0)
     rejected_count = Column(Integer, default=0)
+    auth_failed_count = Column(Integer, default=0)
 
 
 class SystemSetting(Base):

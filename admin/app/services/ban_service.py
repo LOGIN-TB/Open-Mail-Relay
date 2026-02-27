@@ -20,7 +20,7 @@ CLIENT_ACCESS_FILE = settings.POSTFIX_CONFIG_PATH / "client_access"
 
 # Defaults
 DEFAULT_MAX_ATTEMPTS = 5
-DEFAULT_TIME_WINDOW_MINUTES = 10
+DEFAULT_TIME_WINDOW_MINUTES = 60
 DEFAULT_BAN_DURATIONS = [30, 360, 1440, 10080]  # minutes
 
 
@@ -75,7 +75,14 @@ def _is_whitelisted(db: Session, ip_address: str) -> bool:
 
 
 def record_failure(db: Session, ip_address: str, reason: str):
-    """Record a failed attempt. Auto-ban if threshold is reached."""
+    """Record a failed attempt. Auto-ban if threshold is reached.
+
+    Uses a simple inactivity-based window: failures accumulate as long as
+    they keep coming.  The counter resets only when no failure has been
+    recorded for *time_window* minutes (based on the last failure, not the
+    first).  This prevents slow brute-force attacks from evading the ban
+    threshold.
+    """
     if _is_whitelisted(db, ip_address):
         return
 
@@ -104,23 +111,16 @@ def record_failure(db: Session, ip_address: str, reason: str):
         db.add(ban)
         db.commit()
         db.refresh(ban)
-        return
-
-    # Rolling window: decrement count proportionally when window expires,
-    # but keep tracking so persistent attackers eventually get banned
-    if ban.first_fail_at and (now - ban.first_fail_at) > timedelta(minutes=time_window):
-        # Halve the fail count instead of resetting — persistent attackers accumulate
-        ban.fail_count = max(1, ban.fail_count // 2 + 1)
+    else:
+        # Inactivity reset: if no failure for the entire window, start fresh.
+        # first_fail_at tracks the most recent failure timestamp.
+        if ban.first_fail_at and (now - ban.first_fail_at) > timedelta(minutes=time_window):
+            ban.fail_count = 1
+        else:
+            ban.fail_count += 1
         ban.first_fail_at = now
         ban.reason = reason
-    else:
-        # Within window — increment fail count
-        ban.fail_count += 1
-        if not ban.first_fail_at:
-            ban.first_fail_at = now
-        ban.reason = reason
-
-    db.commit()
+        db.commit()
 
     # Check threshold
     if ban.fail_count >= max_attempts:

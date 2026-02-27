@@ -7,6 +7,7 @@ interface DashboardStats {
   deferred_today: number
   bounced_today: number
   rejected_today: number
+  auth_failed_today: number
   queue_size: number
   success_rate: number
 }
@@ -17,6 +18,7 @@ interface ChartData {
   deferred: number[]
   bounced: number[]
   rejected: number[]
+  auth_failed: number[]
 }
 
 interface MailEvent {

@@ -36,6 +36,7 @@ def get_stats(
         deferred_today=stats.get("deferred", 0),
         bounced_today=stats.get("bounced", 0),
         rejected_today=stats.get("rejected", 0),
+        auth_failed_today=stats.get("auth_failed", 0),
         queue_size=get_queue_size(),
         success_rate=round((sent / total * 100) if total > 0 else 0, 1),
     )
@@ -83,6 +84,7 @@ def get_chart_data(
     deferred = []
     bounced = []
     rejected = []
+    auth_failed = []
 
     for s in stats:
         labels.append(s.hour_start.strftime("%H:%M"))
@@ -90,6 +92,7 @@ def get_chart_data(
         deferred.append(s.deferred_count)
         bounced.append(s.bounced_count)
         rejected.append(s.rejected_count)
+        auth_failed.append(s.auth_failed_count or 0)
 
     return ChartData(
         labels=labels,
@@ -97,4 +100,5 @@ def get_chart_data(
         deferred=deferred,
         bounced=bounced,
         rejected=rejected,
+        auth_failed=auth_failed,
     )
