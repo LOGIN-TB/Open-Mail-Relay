@@ -106,19 +106,20 @@ def record_failure(db: Session, ip_address: str, reason: str):
         db.refresh(ban)
         return
 
-    # Reset window if expired
+    # Rolling window: decrement count proportionally when window expires,
+    # but keep tracking so persistent attackers eventually get banned
     if ban.first_fail_at and (now - ban.first_fail_at) > timedelta(minutes=time_window):
-        ban.fail_count = 1
+        # Halve the fail count instead of resetting — persistent attackers accumulate
+        ban.fail_count = max(1, ban.fail_count // 2 + 1)
         ban.first_fail_at = now
         ban.reason = reason
-        db.commit()
-        return
+    else:
+        # Within window — increment fail count
+        ban.fail_count += 1
+        if not ban.first_fail_at:
+            ban.first_fail_at = now
+        ban.reason = reason
 
-    # Increment fail count
-    ban.fail_count += 1
-    if not ban.first_fail_at:
-        ban.first_fail_at = now
-    ban.reason = reason
     db.commit()
 
     # Check threshold

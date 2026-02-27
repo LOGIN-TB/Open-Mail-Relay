@@ -3,6 +3,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -84,12 +85,29 @@ def run_migrations():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup — run Alembic migrations
+    # Startup — run Alembic migrations (must happen before logging setup
+    # because Alembic's fileConfig can reconfigure loggers)
     try:
         run_migrations()
     except Exception as e:
-        logger.warning(f"Alembic migration failed, falling back to create_all: {e}")
+        logging.warning(f"Alembic migration failed, falling back to create_all: {e}")
         Base.metadata.create_all(bind=engine)
+
+    # Configure app-level logging AFTER Alembic migrations
+    # (Alembic's fileConfig may reconfigure the logging hierarchy)
+    app_logger = logging.getLogger("app")
+    app_logger.setLevel(logging.INFO)
+    app_logger.propagate = False  # prevent duplicate output via root handler
+    if not app_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)-5s %(name)s: %(message)s"))
+        app_logger.addHandler(handler)
+
+    # Re-enable any loggers that fileConfig may have disabled
+    for name in logging.Logger.manager.loggerDict:
+        if name.startswith("app."):
+            lg = logging.getLogger(name)
+            lg.disabled = False
     create_default_admin()
 
     # Sync Dovecot users from DB (regenerate passwd-file on every start)

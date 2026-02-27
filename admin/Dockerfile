@@ -27,6 +27,8 @@ COPY --from=frontend-build /build/dist /app/static
 # Data directory for SQLite
 RUN mkdir -p /app/data
 
+ENV PYTHONUNBUFFERED=1
+
 EXPOSE 8000
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]

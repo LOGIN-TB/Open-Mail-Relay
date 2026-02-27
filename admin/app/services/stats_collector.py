@@ -72,23 +72,26 @@ class StatsCollector:
         # Process lines from queue without blocking the event loop
         try:
             while self._running:
-                try:
-                    line = self._line_queue.get_nowait()
-                    # Check for SASL auth failures (on every line)
-                    fail_ip = parse_auth_failure(line)
-                    if fail_ip:
-                        self._record_ban_failure(fail_ip, "sasl_auth_failed")
-                    event = parse_and_enrich(line)
-                    if event and event.status:
-                        self._store_event(event)
-                except Empty:
-                    pass
+                processed = 0
+                while processed < 200:
+                    try:
+                        line = self._line_queue.get_nowait()
+                        # Check for SASL auth failures (on every line)
+                        fail_ip = parse_auth_failure(line)
+                        if fail_ip:
+                            self._record_ban_failure(fail_ip, "sasl_auth_failed")
+                        event = parse_and_enrich(line)
+                        if event and event.status:
+                            self._store_event(event)
+                        processed += 1
+                    except Empty:
+                        break
 
                 # Check if reader thread has finished (container gone, error, etc.)
                 if reader_future.done():
                     break
 
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.2)
         except Exception as e:
             if self._running:
                 logger.error(f"Log processing error: {e}")

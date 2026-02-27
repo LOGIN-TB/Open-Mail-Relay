@@ -23,11 +23,11 @@ class ParsedMailEvent:
 # Status line: to=<recipient>, relay=..., delay=..., delays=..., dsn=..., status=sent/deferred/bounced
 STATUS_RE = re.compile(
     r"(?P<queue_id>[A-F0-9]+): "
-    r"to=<(?P<recipient>[^>]*)>.*?"
-    r"(?:relay=(?P<relay>[^,]+))?,?\s*"
-    r"(?:delay=(?P<delay>[\d.]+))?,?\s*"
+    r"to=<(?P<recipient>[^>]*)>,\s*"
+    r"(?:relay=(?P<relay>[^,]+),\s*)?"
+    r"(?:delay=(?P<delay>[\d.]+),\s*)?"
     r".*?"
-    r"(?:dsn=(?P<dsn>[\d.]+))?,?\s*"
+    r"(?:dsn=(?P<dsn>[\d.]+),\s*)?"
     r"status=(?P<status>\w+)"
     r"(?:\s+\((?P<message>[^)]*)\))?"
 )
@@ -35,8 +35,8 @@ STATUS_RE = re.compile(
 # From line: from=<sender>, size=..., nrcpt=...
 FROM_RE = re.compile(
     r"(?P<queue_id>[A-F0-9]+): "
-    r"from=<(?P<sender>[^>]*)>.*?"
-    r"(?:size=(?P<size>\d+))?"
+    r"from=<(?P<sender>[^>]*)>,\s*"
+    r"size=(?P<size>\d+)"
 )
 
 # Client line: QUEUE_ID: client=hostname[IP], sasl_method=..., sasl_username=...
