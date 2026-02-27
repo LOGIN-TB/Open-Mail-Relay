@@ -116,6 +116,10 @@ class StatsCollector:
     def _store_event(self, event):
         db = SessionLocal()
         try:
+            # Normalize to naive UTC for SQLite compatibility
+            if event.timestamp and event.timestamp.tzinfo:
+                event.timestamp = event.timestamp.replace(tzinfo=None)
+
             mail_event = MailEvent(
                 timestamp=event.timestamp,
                 queue_id=event.queue_id,
