@@ -65,6 +65,18 @@ services:
     networks:
       - mail-network
 
+  firewall:
+    image: alpine:3.21
+    container_name: open-mail-relay-firewall
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./scripts/firewall-entrypoint.sh:/entrypoint.sh:ro
+      - ./postfix:/etc/postfix-config:ro
+    entrypoint: /entrypoint.sh
+    restart: unless-stopped
+
 volumes:
   postfix-queue:
   mail-log:

@@ -11,14 +11,14 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
 - **Automatisches TLS** - Caddy beschafft und erneuert Let's Encrypt-Zertifikate automatisch. Synchronisierung nach Postfix alle 6 Stunden
 - **IP-basierte Autorisierung** - Relay nur fuer konfigurierte Netzwerke (CIDR), verwaltbar ueber das Admin-Panel. Jedes Netzwerk kann einem Inhaber zugeordnet werden
 - **SMTP-Benutzer-Authentifizierung (SASL)** - Zusaetzlich zur IP-Whitelist koennen SMTP-Benutzer mit Benutzername/Passwort von beliebigen IPs relayen. Dovecot-basiertes SASL, verwaltbar ueber das Admin-Panel inkl. PDF-Konfigurationsblatt
-- **Automatische IP-Sperre** - Erkennt Brute-Force-Versuche (SASL-Auth-Fehler, Relay-Ablehnungen) und sperrt IPs automatisch mit progressiver Dauer (30 Min → 6 Std → 24 Std → 7 Tage). Admins koennen IPs auch manuell sperren/entsperren. Durchsetzung ueber Postfix CIDR Access Map (Docker-freundlich, kein fail2ban noetig)
+- **Automatische IP-Sperre mit Firewall-Blocking** - Erkennt Brute-Force-Versuche (SASL-Auth-Fehler, Relay-Ablehnungen) und sperrt IPs automatisch mit progressiver Dauer (30 Min → 6 Std → 24 Std → 7 Tage). Admins koennen IPs auch manuell sperren/entsperren. Zwei Verteidigungslinien: **iptables/ipset** droppt Pakete gesperrter IPs auf Netzwerkebene (kein TCP-Handshake moeglich), Postfix CIDR Access Map als Fallback
 - **Mail-Drosselung & IP-Warmup** - Outbound-Rate-Limiting mit automatischem 4-Phasen-Warmup fuer neue IPs. Per-Domain Transport-Drosselung (Gmail, Outlook, Yahoo etc.) und konfigurierbarer Batch-Worker fuer kontrollierte Zustellung
 - **Echtzeit-Monitoring** - Dashboard mit Zustellstatistiken, Queue-Status, Aktivitaetslog und Verlaufsdiagramm
 - **Quellenverfolgung** - Jedes Mail-Event zeigt Client-IP und SMTP-Benutzer mit farbcodierten Badges (Protokoll + Dashboard)
 - **Konfigurierbare Zeitzone** - Zeitzone fuer die Anzeige aller Zeitstempel im Admin-Panel einstellbar (intern bleibt alles UTC). Container-Zeitzone per `TZ` Umgebungsvariable konfigurierbar
 - **Oeffentliche Abuse-Seite** - Professionelle Abuse- & Postmaster-Infoseite unter dem Mail-Hostnamen (RFC 2142 konform), mit admin-pflegbaren Kontaktdaten, Systeminformationen und Impressum-Link. Zweisprachig (DE/EN) mit Sprachwechsel im Header
 - **Einklappbare Seitenleiste** - Sidebar per Toggle-Button ein-/ausklappbar, Zustand wird gespeichert
-- **Docker-basiert** - Drei Container (Caddy, Admin-Panel, Open-Mail-Relay), einfach zu deployen
+- **Docker-basiert** - Vier Container (Caddy, Admin-Panel, Open-Mail-Relay, Firewall), einfach zu deployen
 
 ## Architektur
 
@@ -26,11 +26,15 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
                     ┌─────────────────────────────────────────┐
                     │              Docker Host                 │
                     │                                         │
+                    │   Firewall (iptables/ipset)              │
+                    │      └── DOCKER-USER Chain: DROP         │
+                    │          gesperrte IPs auf Port 25/587   │
+                    │                                         │
   HTTPS :443 ──────┤──► Caddy (Reverse Proxy + Auto-TLS)     │
   HTTP  :80  ──────┤──►   ├── admin.example.com ──► Admin    │
                     │      └── mail.example.com  ──► Abuse    │
                     │                                         │
-  SMTP  :25  ──────┤──► Postfix Open Mail Relay                   │
+  SMTP  :25  ──────┤──► Postfix Open Mail Relay               │
   Sub.  :587 ──────┤──►   ├── STARTTLS (optional / erzwungen)│
                     │      ├── IP-Whitelist (mynetworks)      │
                     │      ├── SMTP-Auth / SASL (Dovecot)     │
@@ -40,7 +44,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
                     │      ├── Dashboard & Statistiken        │
                     │      ├── Netzwerk-/IP-Verwaltung        │
                     │      ├── SMTP-Benutzerverwaltung        │
-                    │      ├── IP-Sperren (automatisch/manuell) │
+                    │      ├── IP-Sperren (Firewall + Postfix)│
                     │      ├── Mail-Drosselung & IP-Warmup    │
                     │      ├── TLS-Zertifikat-Status          │
                     │      └── Benutzer- & Konfiguration      │
@@ -194,9 +198,22 @@ docker compose logs --tail 100 open-mail-relay
 docker compose logs -f admin-panel
 ```
 
-## Firewall
+## Firewall (automatische IP-Sperre)
 
-Port 25 und 587 sollten auf Netzwerk-Ebene zusaetzlich abgesichert werden:
+Der `firewall`-Sidecar-Container verwaltet automatisch iptables-Regeln auf dem Docker-Host:
+
+```
+Gesperrte IP ──► iptables DOCKER-USER ──► DROP (Paket verworfen)
+                                           Kein TCP-Handshake, kein Log-Eintrag
+```
+
+- **ipset** (`omr-banned`, Typ `hash:net`) speichert gebannte IPs im Kernel
+- Einzelne iptables-Regel in der `DOCKER-USER`-Chain droppt Pakete auf Port 25/587
+- Automatische Aktualisierung bei Ban/Unban/Ablauf durch das Admin-Panel
+- Bestehende Sperren werden beim Container-Start aus `client_access` geladen
+- Postfix CIDR Access Map (`client_access`) bleibt als zweite Verteidigungslinie
+
+Zusaetzlich koennen Port 25 und 587 manuell auf Netzwerk-Ebene abgesichert werden:
 
 ```bash
 # ufw
@@ -258,6 +275,7 @@ swaks --to empfaenger@zieldomain.de \
 |------------|-------------|
 | Mail-Server | Postfix + Dovecot (SASL) auf Debian Bookworm Slim |
 | Reverse Proxy | Caddy 2 (Auto-TLS) |
+| Firewall | iptables/ipset via Alpine-Sidecar (host-Netzwerk) |
 | Backend | Python 3.12, FastAPI, SQLAlchemy, Alembic |
 | Frontend | Vue 3, TypeScript, PrimeVue, Chart.js |
 | Datenbank | SQLite |
@@ -268,7 +286,7 @@ swaks --to empfaenger@zieldomain.de \
 
 ```
 Open-Mail-Relay/
-├── docker-compose.yml          # Service-Orchestrierung
+├── docker-compose.yml          # Service-Orchestrierung (4 Container)
 ├── Dockerfile                  # Postfix Mail-Relay Image
 ├── .env.example                # Vorlage fuer Umgebungsvariablen
 ├── admin/
@@ -300,7 +318,8 @@ Open-Mail-Relay/
 │   └── mynetworks              # Erlaubte Netzwerke
 └── scripts/
     ├── entrypoint.sh           # Container-Start + TLS-Sync
-    └── check-queue.sh          # Queue-Monitoring
+    ├── check-queue.sh          # Queue-Monitoring
+    └── firewall-entrypoint.sh  # Firewall-Sidecar (ipset/iptables)
 ```
 
 ## Lizenz

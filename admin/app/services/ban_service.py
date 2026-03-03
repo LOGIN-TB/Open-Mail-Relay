@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models import IpBan, Network, SystemSetting
 from app.services.docker_service import reload_postfix
+from app.services import firewall_service
 
 logger = logging.getLogger(__name__)
 
@@ -150,6 +151,7 @@ def activate_ban(db: Session, ip_address: str):
     logger.info(f"IP {ip_address} banned (count={ban.ban_count}, duration={duration_minutes}min)")
 
     generate_client_access_file(db)
+    firewall_service.block_ip(ip_address)
 
 
 def manual_ban(db: Session, ip_address: str, reason: str = "manual", notes: str = ""):
@@ -180,6 +182,7 @@ def manual_ban(db: Session, ip_address: str, reason: str = "manual", notes: str 
     db.commit()
     logger.info(f"IP {ip_address} manually banned (permanent)")
     generate_client_access_file(db)
+    firewall_service.block_ip(ip_address)
 
 
 def unban_ip(db: Session, ban_id: int):
@@ -193,6 +196,7 @@ def unban_ip(db: Session, ban_id: int):
     db.commit()
     logger.info(f"IP {ban.ip_address} unbanned")
     generate_client_access_file(db)
+    firewall_service.unblock_ip(ban.ip_address)
 
 
 def generate_client_access_file(db: Session):
@@ -223,11 +227,15 @@ def check_expired_bans(db: Session):
     if not expired:
         return
 
+    expired_ips = []
     for ban in expired:
         ban.is_active = False
         ban.fail_count = 0
         ban.first_fail_at = None
+        expired_ips.append(ban.ip_address)
         logger.info(f"Ban expired for IP {ban.ip_address}")
 
     db.commit()
     generate_client_access_file(db)
+    for ip in expired_ips:
+        firewall_service.unblock_ip(ip)

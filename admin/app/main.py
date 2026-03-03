@@ -11,7 +11,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import engine, SessionLocal
-from app.models import Base, User
+from app.models import Base, IpBan, User
 from app.auth import get_password_hash
 from app.routers import auth_router, dashboard_router, network_router, config_router, logs_router
 from app.routers import smtp_users_router
@@ -146,6 +146,18 @@ async def lifespan(app: FastAPI):
         generate_client_access_file(db)
     except Exception as e:
         logger.warning(f"Initial client_access sync failed: {e}")
+    finally:
+        db.close()
+
+    # Sync firewall rules (ipset) from DB on every start
+    from app.services.firewall_service import sync_bans
+    db = SessionLocal()
+    try:
+        active_bans = db.query(IpBan).filter(IpBan.is_active == True).all()
+        banned_ips = [ban.ip_address for ban in active_bans]
+        sync_bans(banned_ips)
+    except Exception as e:
+        logger.warning(f"Initial firewall sync failed: {e}")
     finally:
         db.close()
 

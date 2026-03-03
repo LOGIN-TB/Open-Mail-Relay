@@ -4,6 +4,26 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.6.0] - 2026-03-03
+
+### Hinzugefuegt
+- **Firewall-basierte IP-Sperre (iptables/ipset)** - Gesperrte IPs werden jetzt auf Netzwerkebene geblockt, nicht nur per Postfix-REJECT
+  - Neuer Docker-Sidecar-Container `firewall` mit `network_mode: host` und `NET_ADMIN` Capability
+  - `ipset` (`omr-banned`, Typ `hash:net`) fuer effiziente IP-Verwaltung im Kernel
+  - Einzelne iptables-Regel in der `DOCKER-USER`-Chain droppt Pakete gebannter IPs auf Port 25/587 **vor** Docker-Routing
+  - Gesperrte IPs koennen keine TCP-Verbindung mehr aufbauen (kein SYN-ACK, kein Postfix-Log-Eintrag)
+  - Automatische Synchronisierung: ipset wird bei Ban/Unban/Ablauf und beim Admin-Panel-Start aktualisiert
+  - Firewall-Container laedt bestehende Sperren aus `client_access` beim eigenen Start (unabhaengig vom Admin-Panel)
+  - Bestehende Postfix-Ebene (`client_access` CIDR Map) bleibt als zweite Verteidigungslinie erhalten
+- Neuer Service `firewall_service.py` mit Funktionen `block_ip()`, `unblock_ip()`, `sync_bans()`
+- Neues Entrypoint-Skript `scripts/firewall-entrypoint.sh`
+
+### Geaendert
+- `docker-compose.yml` — Neuer `firewall`-Service (Alpine 3.21, host-Netzwerk, NET_ADMIN)
+- `ban_service.py` — Alle Ban/Unban-Operationen aktualisieren jetzt zusaetzlich das Firewall-ipset
+- `main.py` — Firewall-Sync (`sync_bans`) beim Admin-Panel-Start
+- `config.py` — Neues Setting `FIREWALL_CONTAINER`
+
 ## [1.5.1] - 2026-02-27
 
 ### Hinzugefuegt
