@@ -55,6 +55,11 @@ const router = createRouter({
           component: () => import('../views/RblCheckerView.vue'),
         },
         {
+          path: 'dns-pruefung',
+          name: 'dns-checker',
+          component: () => import('../views/DnsCheckView.vue'),
+        },
+        {
           path: 'benutzer',
           name: 'users',
           component: () => import('../views/BenutzerView.vue'),

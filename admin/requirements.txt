@@ -12,3 +12,4 @@ websockets==14.1
 python-multipart==0.0.20
 cryptography>=42.0.0
 reportlab>=4.0
+dnspython>=2.6.0

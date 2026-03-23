@@ -14,6 +14,7 @@ const router = useRouter()
 const dashboard = useDashboardStore()
 const bannedIps = ref<Set<string>>(new Set())
 const rblStatus = ref<{ enabled: boolean; last_check_time: string; total_listings: number; all_clean: boolean } | null>(null)
+const dnsStatus = ref<{ checked: boolean; all_ok: boolean; issues: number; last_check_time: string } | null>(null)
 
 async function fetchBannedIps() {
   try {
@@ -33,6 +34,24 @@ async function fetchRblStatus() {
   }
 }
 
+async function fetchDnsStatus() {
+  try {
+    const { data } = await api.get('/dns-check/status')
+    dnsStatus.value = data
+  } catch {
+    // ignore
+  }
+}
+
+const dnsCheckTime = computed(() => {
+  if (!dnsStatus.value?.last_check_time) return ''
+  try {
+    return new Date(dnsStatus.value.last_check_time).toLocaleString('de-DE')
+  } catch {
+    return dnsStatus.value.last_check_time
+  }
+})
+
 const rblCheckTime = computed(() => {
   if (!rblStatus.value?.last_check_time) return ''
   try {
@@ -48,10 +67,12 @@ onMounted(() => {
   dashboard.fetchAll()
   fetchBannedIps()
   fetchRblStatus()
+  fetchDnsStatus()
   refreshInterval = setInterval(() => {
     dashboard.fetchAll()
     fetchBannedIps()
     fetchRblStatus()
+    fetchDnsStatus()
   }, 30000)
 })
 
@@ -80,6 +101,23 @@ onUnmounted(() => {
         <span v-else class="rbl-status-detail">{{ rblStatus.total_listings }} {{ t.dashboard.rblListings }}</span>
       </div>
       <div v-if="rblCheckTime" class="rbl-status-time">{{ rblCheckTime }}</div>
+      <i class="pi pi-angle-right rbl-status-arrow"></i>
+    </div>
+
+    <!-- DNS Status Card -->
+    <div class="rbl-status-card" :class="dnsStatus?.checked ? (dnsStatus.all_ok ? 'rbl-clean' : 'rbl-warn') : 'rbl-neutral'" @click="router.push('/dns-pruefung')">
+      <div class="rbl-status-icon">
+        <i v-if="!dnsStatus?.checked" class="pi pi-globe" style="color: #94a3b8"></i>
+        <i v-else-if="dnsStatus.all_ok" class="pi pi-check-circle" style="color: #166534"></i>
+        <i v-else class="pi pi-exclamation-triangle" style="color: #991b1b"></i>
+      </div>
+      <div class="rbl-status-text">
+        <span class="rbl-status-label">{{ t.dashboard.dnsCheck }}</span>
+        <span v-if="!dnsStatus?.checked" class="rbl-status-detail">{{ t.dashboard.dnsNoCheck }}</span>
+        <span v-else-if="dnsStatus.all_ok" class="rbl-status-detail">{{ t.dashboard.dnsAllOk }}</span>
+        <span v-else class="rbl-status-detail">{{ dnsStatus.issues }} {{ t.dashboard.dnsIssues }}</span>
+      </div>
+      <div v-if="dnsCheckTime" class="rbl-status-time">{{ dnsCheckTime }}</div>
       <i class="pi pi-angle-right rbl-status-arrow"></i>
     </div>
 

@@ -4,6 +4,33 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.8.0] - 2026-03-23
+
+### Hinzugefuegt
+- **DNS-Record-Pruefung (SPF, DMARC, DKIM)** — Neue Admin-Panel-Seite zur Validierung aller relevanten DNS-Records fuer die Mail-Zustellung
+  - **SPF-Check** mit rekursiver `include:`-Aufloesung — prueft ob die Server-IP im SPF-Record autorisiert ist, inklusive verschachtelter Include-Ketten (bis 5 Ebenen, RFC 7208 konform)
+  - **DMARC-Check** — prueft Existenz und Gueltigkeit des DMARC-Records inkl. Policy-Parsing
+  - **DKIM-Check** — prueft ob ein DKIM-Public-Key-Record fuer den konfigurierten Selector existiert
+  - Copy-Paste DNS-Eintraege fuer fehlende Records (SPF, DMARC) werden automatisch generiert
+  - DKIM-Selector automatisch aus Hostname abgeleitet (z.B. `relay2.spamgo.de` → Selector `relay2`) — ermoeglicht mehrere Mail-Server auf derselben Domain
+  - Test beliebig oft wiederholbar per Button
+- **DKIM-Signing mit OpenDKIM** — Ausgehende E-Mails werden automatisch DKIM-signiert
+  - OpenDKIM als Milter in den Postfix-Container integriert
+  - 2048-Bit RSA-Schluessel wird beim ersten Container-Start automatisch generiert
+  - Schluessel persistent im Shared Volume (`postfix/dkim/`), ueberlebt Container-Rebuilds
+  - DKIM Public Key im Admin-Panel anzeigbar mit Copy-Button fuer DNS-Eintrag
+  - Schluessel loeschen und neu generieren ueber Admin-Panel moeglich
+- **Dashboard DNS-Status-Indikator** — Clickbare Statuskarte zeigt gruen (alle Records OK), rot (Probleme) oder grau (nicht geprueft)
+- Neue API-Endpunkte unter `/api/dns-check`:
+  - `GET /api/dns-check` — Einstellungen und letzte Ergebnisse
+  - `PUT /api/dns-check` — DKIM-Selector speichern
+  - `POST /api/dns-check/check` — DNS-Pruefung ausfuehren
+  - `GET /api/dns-check/status` — Dashboard-Zusammenfassung
+  - `GET /api/dns-check/dkim-key` — DKIM Public Key lesen
+  - `DELETE /api/dns-check/dkim-key` — DKIM-Schluessel loeschen
+- Neue Abhaengigkeit: `dnspython>=2.6.0` fuer TXT-Record-Abfragen
+- Audit-Logging fuer DNS-Pruefungen, Einstellungsaenderungen und DKIM-Key-Loeschung
+
 ## [1.7.0] - 2026-03-23
 
 ### Hinzugefuegt

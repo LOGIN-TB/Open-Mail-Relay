@@ -17,6 +17,8 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
 - **Quellenverfolgung** - Jedes Mail-Event zeigt Client-IP und SMTP-Benutzer mit farbcodierten Badges (Protokoll + Dashboard)
 - **Konfigurierbare Zeitzone** - Zeitzone fuer die Anzeige aller Zeitstempel im Admin-Panel einstellbar (intern bleibt alles UTC). Container-Zeitzone per `TZ` Umgebungsvariable konfigurierbar
 - **RBL-Blacklist-Checker** - Automatische Pruefung der Server-IP gegen 22 DNS-Blacklists (Spamhaus, Barracuda, SpamCop, SORBS u.v.m.) mit konfigurierbarem Pruefintervall und E-Mail-Alarm bei Listings. Eigene Server-IP wird automatisch aus der Postfix-Konfiguration gelesen. RBL-Status-Indikator auf dem Dashboard
+- **DNS-Record-Pruefung (SPF, DMARC, DKIM)** - Validierung aller mail-relevanten DNS-Records mit Copy-Paste-Vorlagen fuer fehlende Eintraege. SPF-Check mit rekursiver `include:`-Aufloesung. DKIM-Selector automatisch pro Server (Multi-Server-faehig). Dashboard-Statusindikator
+- **DKIM-Signing** - Automatische DKIM-Signierung ausgehender E-Mails via OpenDKIM. 2048-Bit RSA-Schluessel wird beim ersten Start generiert. Selector automatisch aus Hostname abgeleitet (Multi-Server-faehig). Public Key im Admin-Panel anzeigbar
 - **Oeffentliche Abuse-Seite** - Professionelle Abuse- & Postmaster-Infoseite unter dem Mail-Hostnamen (RFC 2142 konform), mit admin-pflegbaren Kontaktdaten, Systeminformationen und Impressum-Link. Zweisprachig (DE/EN) mit Sprachwechsel im Header
 - **Einklappbare Seitenleiste** - Sidebar per Toggle-Button ein-/ausklappbar, Zustand wird gespeichert
 - **Docker-basiert** - Vier Container (Caddy, Admin-Panel, Open-Mail-Relay, Firewall), einfach zu deployen
@@ -39,6 +41,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
   Sub.  :587 ──────┤──►   ├── STARTTLS (optional / erzwungen)│
                     │      ├── IP-Whitelist (mynetworks)      │
                     │      ├── SMTP-Auth / SASL (Dovecot)     │
+                    │      ├── DKIM-Signing (OpenDKIM)        │
                     │      └── Weiterleitung an Ziel-MX       │
                     │                                         │
                     │   Admin-Panel (FastAPI + Vue 3)          │
@@ -158,6 +161,15 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - Zusaetzliche Server konfigurierbar fuer Multi-IP-Setups
 - False-Positive-Filterung fuer Spamhaus Public-DNS-Resolver-Antworten
 - **Dashboard-Indikator** — Clickbare Statuskarte zeigt gruen (CLEAN), rot (LISTINGS) oder grau (nicht geprueft)
+
+### DNS-Record-Pruefung
+- **SPF-Check** — Prueft ob die Server-IP im SPF-Record autorisiert ist, inklusive rekursiver Aufloesung von `include:`-Ketten (bis 5 Ebenen, RFC 7208 konform)
+- **DMARC-Check** — Prueft Existenz und Gueltigkeit des DMARC-Records (`_dmarc.domain`) inkl. Policy-Parsing
+- **DKIM-Check** — Prueft ob ein DKIM-Public-Key-Record fuer den konfigurierten Selector existiert
+- Copy-Paste DNS-Eintraege werden automatisch generiert fuer fehlende SPF- und DMARC-Records
+- DKIM-Selector automatisch aus Hostname abgeleitet (z.B. `relay2` fuer `relay2.spamgo.de`) — Multi-Server-faehig
+- **DKIM-Signing** — OpenDKIM signiert alle ausgehenden Mails. 2048-Bit RSA-Schluessel wird beim ersten Container-Start generiert und im Admin-Panel mit Copy-Button angezeigt. Schluessel loeschen und neu generieren moeglich
+- **Dashboard-Indikator** — Clickbare Statuskarte zeigt gruen (alle Records OK), rot (Probleme) oder grau (nicht geprueft)
 
 ### Protokoll
 - Vollstaendige Mail-Event-Historie mit Filterung nach Status, Zeitraum und Freitextsuche
@@ -287,7 +299,7 @@ swaks --to empfaenger@zieldomain.de \
 
 | Komponente | Technologie |
 |------------|-------------|
-| Mail-Server | Postfix + Dovecot (SASL) auf Debian Bookworm Slim |
+| Mail-Server | Postfix + Dovecot (SASL) + OpenDKIM auf Debian Bookworm Slim |
 | Reverse Proxy | Caddy 2 (Auto-TLS) |
 | Firewall | iptables/ipset via Alpine-Sidecar (host-Netzwerk) |
 | Backend | Python 3.12, FastAPI, SQLAlchemy, Alembic |

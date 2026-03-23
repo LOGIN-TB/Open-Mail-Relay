@@ -18,6 +18,7 @@ const navItems = [
   { label: t.nav.throttling, icon: 'pi pi-gauge', to: '/drosselung' },
   { label: t.nav.config, icon: 'pi pi-cog', to: '/konfiguration' },
   { label: t.nav.rblChecker, icon: 'pi pi-shield', to: '/rbl-pruefung' },
+  { label: t.nav.dnsChecker, icon: 'pi pi-verified', to: '/dns-pruefung' },
   { label: t.nav.users, icon: 'pi pi-users', to: '/benutzer' },
 ]
 

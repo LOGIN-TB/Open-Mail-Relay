@@ -19,6 +19,7 @@ from app.routers import throttle_router
 from app.routers import ip_bans_router
 from app.routers.abuse_router import public_router as abuse_public_router, admin_router as abuse_admin_router
 from app.routers import rbl_router
+from app.routers import dns_check_router
 from app.services.stats_collector import StatsCollector
 from app.services.sasl_service import sync_dovecot_users
 from app.services.policy_server import PolicyServer
@@ -259,6 +260,7 @@ app.include_router(throttle_router.router, prefix="/api/throttling", tags=["thro
 app.include_router(ip_bans_router.router, prefix="/api/ip-bans", tags=["ip-bans"])
 app.include_router(abuse_admin_router, prefix="/api/abuse-settings", tags=["abuse-settings"])
 app.include_router(rbl_router.router, prefix="/api/rbl", tags=["rbl"])
+app.include_router(dns_check_router.router, prefix="/api/dns-check", tags=["dns-check"])
 
 # Public abuse page (must be before the SPA catch-all)
 app.include_router(abuse_public_router, tags=["public"])

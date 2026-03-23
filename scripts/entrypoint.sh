@@ -65,6 +65,80 @@ fi
 # Erhoehte Inbound-Limits (Outbound wird gedrosselt)
 postconf -e "smtpd_client_connection_rate_limit = 500"
 
+# --- DKIM-Signing mit OpenDKIM ---
+DKIM_DIR="/etc/postfix-config/dkim"
+# Selector automatisch aus Hostname ableiten (erster Label, z.B. relay2.spamgo.de -> relay2)
+DKIM_SELECTOR=$(echo "$MAIL_HOSTNAME" | cut -d. -f1)
+if [ -z "$DKIM_SELECTOR" ]; then
+    DKIM_SELECTOR="default"
+fi
+MAIL_DOMAIN=$(postconf -h mydomain 2>/dev/null)
+if [ -z "$MAIL_DOMAIN" ]; then
+    # Domain aus Hostname extrahieren (erster Label entfernen)
+    MAIL_DOMAIN=$(echo "$MAIL_HOSTNAME" | sed 's/^[^.]*\.//')
+fi
+
+mkdir -p "$DKIM_DIR"
+
+# DKIM-Schluessel generieren falls nicht vorhanden
+if [ ! -f "${DKIM_DIR}/${DKIM_SELECTOR}.private" ]; then
+    echo "Generating DKIM key pair (selector=${DKIM_SELECTOR}, domain=${MAIL_DOMAIN})..."
+    opendkim-genkey \
+        -b 2048 \
+        -d "$MAIL_DOMAIN" \
+        -s "$DKIM_SELECTOR" \
+        -D "$DKIM_DIR"
+    echo "DKIM key pair generated in ${DKIM_DIR}"
+else
+    echo "DKIM key pair already exists (selector=${DKIM_SELECTOR})"
+fi
+
+# Alten "default"-Key aufraeumen falls Selector gewechselt hat
+if [ "$DKIM_SELECTOR" != "default" ] && [ -f "${DKIM_DIR}/default.private" ]; then
+    echo "Removing old 'default' DKIM key (replaced by selector '${DKIM_SELECTOR}')"
+    rm -f "${DKIM_DIR}/default.private" "${DKIM_DIR}/default.txt"
+fi
+
+# Berechtigungen setzen
+chown -R opendkim:opendkim "$DKIM_DIR"
+chmod 600 "${DKIM_DIR}/${DKIM_SELECTOR}.private"
+chmod 644 "${DKIM_DIR}/${DKIM_SELECTOR}.txt"
+
+# OpenDKIM-Konfiguration dynamisch generieren
+mkdir -p /etc/opendkim /var/run/opendkim
+chown opendkim:opendkim /var/run/opendkim
+
+cat > /etc/opendkim.conf <<DKIMEOF
+Syslog                  yes
+SyslogSuccess           yes
+LogWhy                  yes
+Mode                    s
+Canonicalization        relaxed/simple
+Domain                  ${MAIL_DOMAIN}
+Selector                ${DKIM_SELECTOR}
+KeyFile                 ${DKIM_DIR}/${DKIM_SELECTOR}.private
+Socket                  inet:8891@localhost
+PidFile                 /var/run/opendkim/opendkim.pid
+UMask                   002
+UserID                  opendkim:opendkim
+OversignHeaders         From
+InternalHosts           127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+DKIMEOF
+
+echo "OpenDKIM configuration written"
+
+# OpenDKIM starten
+echo "Starting OpenDKIM..."
+opendkim -x /etc/opendkim.conf
+echo "OpenDKIM started (milter on inet:8891@localhost)"
+
+# Postfix Milter-Anbindung konfigurieren
+postconf -e "milter_default_action = accept"
+postconf -e "milter_protocol = 6"
+postconf -e "smtpd_milters = inet:localhost:8891"
+postconf -e "non_smtpd_milters = inet:localhost:8891"
+echo "Postfix milter configured for DKIM signing"
+
 # Dovecot starten (Auth-Only Modus)
 echo "Starting Dovecot (auth-only)..."
 dovecot
@@ -129,7 +203,7 @@ postfix check
 ) &
 
 # Graceful Shutdown: auf SIGTERM reagieren
-trap "echo 'Stopping Postfix and Dovecot...'; postfix stop; dovecot stop; exit 0" SIGTERM SIGINT SIGQUIT
+trap "echo 'Stopping Postfix, OpenDKIM and Dovecot...'; postfix stop; kill \$(cat /var/run/opendkim/opendkim.pid 2>/dev/null) 2>/dev/null; dovecot stop; exit 0" SIGTERM SIGINT SIGQUIT
 
 # Postfix im Vordergrund starten
 postfix start-fg &

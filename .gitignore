@@ -7,6 +7,8 @@ postfix/mynetworks
 postfix/dovecot-users
 postfix/throttle_enabled
 postfix/transport
+postfix/dkim/
+postfix/client_access
 
 # Python
 __pycache__/

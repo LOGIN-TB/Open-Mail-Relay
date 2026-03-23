@@ -6,6 +6,8 @@ RUN apt-get update && \
         dovecot-core \
         ca-certificates \
         openssl \
+        opendkim \
+        opendkim-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

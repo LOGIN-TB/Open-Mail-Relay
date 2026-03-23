@@ -452,3 +452,46 @@ class RblStatus(BaseModel):
     last_check_time: str = ""
     total_listings: int = 0
     all_clean: bool = False
+
+
+# --- DNS Record Checker ---
+
+class DnsCheckRecord(BaseModel):
+    type: str = ""
+    status: str = ""
+    record: str | None = None
+    details: str = ""
+    suggested_record: str | None = None
+    lookup_domain: str = ""
+
+
+class DnsCheckResult(BaseModel):
+    hostname: str = ""
+    ip: str = ""
+    domain: str = ""
+    dkim_selector: str = ""
+    spf: DnsCheckRecord | None = None
+    dmarc: DnsCheckRecord | None = None
+    dkim: DnsCheckRecord | None = None
+    overall_status: str = ""
+    check_time: str = ""
+
+
+class DnsCheckSettings(BaseModel):
+    dkim_selector: str = "default"
+    last_results: DnsCheckResult | None = None
+    last_check_time: str = ""
+
+
+class DnsCheckSettingsUpdate(BaseModel):
+    dkim_selector: str
+
+
+class DnsCheckStatus(BaseModel):
+    checked: bool = False
+    spf_ok: bool = False
+    dmarc_ok: bool = False
+    dkim_ok: bool = False
+    all_ok: bool = False
+    last_check_time: str = ""
+    issues: int = 0
