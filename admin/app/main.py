@@ -18,10 +18,12 @@ from app.routers import smtp_users_router
 from app.routers import throttle_router
 from app.routers import ip_bans_router
 from app.routers.abuse_router import public_router as abuse_public_router, admin_router as abuse_admin_router
+from app.routers import rbl_router
 from app.services.stats_collector import StatsCollector
 from app.services.sasl_service import sync_dovecot_users
 from app.services.policy_server import PolicyServer
 from app.services.batch_worker import BatchWorker
+from app.services.rbl_worker import RblWorker
 from app.services.throttle_service import seed_default_data
 
 logger = logging.getLogger(__name__)
@@ -29,6 +31,7 @@ logger = logging.getLogger(__name__)
 stats_collector: StatsCollector | None = None
 policy_server: PolicyServer | None = None
 batch_worker: BatchWorker | None = None
+rbl_worker: RblWorker | None = None
 
 
 def create_default_admin():
@@ -161,7 +164,7 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
-    global stats_collector, policy_server, batch_worker
+    global stats_collector, policy_server, batch_worker, rbl_worker
     stats_collector = StatsCollector()
     collector_task = asyncio.create_task(stats_collector.run())
 
@@ -171,6 +174,9 @@ async def lifespan(app: FastAPI):
 
     batch_worker = BatchWorker()
     worker_task = asyncio.create_task(batch_worker.run())
+
+    rbl_worker = RblWorker()
+    rbl_worker_task = asyncio.create_task(rbl_worker.run())
 
     # Ban expiry background task — check every 60 seconds
     async def ban_expiry_loop():
@@ -199,6 +205,14 @@ async def lifespan(app: FastAPI):
 
     from app.services.log_broadcaster import broadcaster
     broadcaster.stop()
+
+    if rbl_worker:
+        rbl_worker.stop()
+    rbl_worker_task.cancel()
+    try:
+        await rbl_worker_task
+    except asyncio.CancelledError:
+        pass
 
     if batch_worker:
         batch_worker.stop()
@@ -244,6 +258,7 @@ app.include_router(smtp_users_router.router, prefix="/api/smtp-users", tags=["sm
 app.include_router(throttle_router.router, prefix="/api/throttling", tags=["throttling"])
 app.include_router(ip_bans_router.router, prefix="/api/ip-bans", tags=["ip-bans"])
 app.include_router(abuse_admin_router, prefix="/api/abuse-settings", tags=["abuse-settings"])
+app.include_router(rbl_router.router, prefix="/api/rbl", tags=["rbl"])
 
 # Public abuse page (must be before the SPA catch-all)
 app.include_router(abuse_public_router, tags=["public"])

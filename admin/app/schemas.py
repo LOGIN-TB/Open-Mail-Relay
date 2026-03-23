@@ -410,3 +410,45 @@ class AbuseSettingsUpdate(BaseModel):
     abuse_data_retention_en: str | None = None
     abuse_spam_filtering_en: str | None = None
     abuse_rfc2142_en: str | None = None
+
+
+# --- RBL Checker ---
+
+class RblSettings(BaseModel):
+    rbl_enabled: str = "false"
+    rbl_servers: str = "[]"
+    rbl_check_interval_hours: str = "6"
+    rbl_mail_to: str = ""
+    rbl_mail_from: str = ""
+    rbl_alert_on_change_only: str = "false"
+    rbl_dns_timeout: str = "5"
+    rbl_last_results: str = "{}"
+    rbl_last_check_time: str = ""
+
+
+class RblSettingsUpdate(BaseModel):
+    rbl_enabled: str | None = None
+    rbl_servers: str | None = None
+    rbl_check_interval_hours: str | None = None
+    rbl_mail_to: str | None = None
+    rbl_mail_from: str | None = None
+    rbl_alert_on_change_only: str | None = None
+    rbl_dns_timeout: str | None = None
+
+
+class RblCheckResult(BaseModel):
+    results: list = []
+    state: dict = {}
+    check_time: str = ""
+
+
+class RblServerInfo(BaseModel):
+    name: str = ""
+    ip: str = ""
+
+
+class RblStatus(BaseModel):
+    enabled: bool = False
+    last_check_time: str = ""
+    total_listings: int = 0
+    all_clean: bool = False

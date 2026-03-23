@@ -4,6 +4,35 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.7.0] - 2026-03-23
+
+### Hinzugefuegt
+- **RBL-Blacklist-Checker** - Automatische Pruefung der Server-IP gegen 22 DNS-Blacklists mit E-Mail-Benachrichtigung bei Listings
+  - Eigene Server-IP und Hostname werden automatisch aus der Postfix-Konfiguration gelesen (kein manuelles Eintragen noetig)
+  - 22 RBL-Blacklists werden parallel geprueft (Spamhaus, Barracuda, SpamCop, SORBS, UCEPROTECT, CBL, PSBL u.v.m.)
+  - Periodische Hintergrund-Pruefung mit konfigurierbarem Intervall (Standard: alle 6 Stunden)
+  - E-Mail-Alarm bei Blacklist-Eintraegen mit detailliertem Report (Uebersicht, Details, neue/entfernte Listings)
+  - Option "Nur bei Aenderung" — E-Mail nur wenn sich der Listing-Status aendert
+  - Test-Mail-Funktion zum Pruefen der E-Mail-Konfiguration
+  - Zusaetzliche Server konfigurierbar fuer Multi-IP-Setups
+  - False-Positive-Filterung: Spamhaus-Antworten fuer oeffentliche DNS-Resolver (127.255.255.252/254/255) werden ignoriert
+- **Dashboard RBL-Status-Indikator** - Clickbare Statuskarte auf dem Dashboard zeigt aktuellen Blacklist-Status
+  - Gruen (CLEAN), Rot (LISTINGS) oder Grau (noch nicht geprueft)
+  - Letzte Pruefzeit wird angezeigt
+  - Klick navigiert direkt zur RBL-Pruefung-Seite
+  - Automatischer Refresh alle 30 Sekunden
+- Neue Admin-Panel-Seite "RBL-Pruefung" mit Einstellungen, Server-Info, Ergebnis-Tabelle und Listing-Details
+- Neuer Hintergrund-Worker `rbl_worker.py` fuer periodische Pruefungen
+- E-Mail-Versand ueber den lokalen Postfix-Container (kein externer SMTP noetig)
+- Neue API-Endpunkte unter `/api/rbl`:
+  - `GET /api/rbl` — Einstellungen lesen
+  - `PUT /api/rbl` — Einstellungen aendern
+  - `POST /api/rbl/check` — Manuelle Pruefung ausloesen
+  - `GET /api/rbl/server-info` — Eigenen Hostnamen und IP abrufen
+  - `GET /api/rbl/status` — Status-Zusammenfassung fuer Dashboard
+  - `POST /api/rbl/test-email` — Test-Mail senden
+- Audit-Logging fuer RBL-Pruefungen, Einstellungsaenderungen und Test-Mails
+
 ## [1.6.0] - 2026-03-03
 
 ### Hinzugefuegt

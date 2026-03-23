@@ -16,6 +16,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
 - **Echtzeit-Monitoring** - Dashboard mit Zustellstatistiken, Queue-Status, Aktivitaetslog und Verlaufsdiagramm
 - **Quellenverfolgung** - Jedes Mail-Event zeigt Client-IP und SMTP-Benutzer mit farbcodierten Badges (Protokoll + Dashboard)
 - **Konfigurierbare Zeitzone** - Zeitzone fuer die Anzeige aller Zeitstempel im Admin-Panel einstellbar (intern bleibt alles UTC). Container-Zeitzone per `TZ` Umgebungsvariable konfigurierbar
+- **RBL-Blacklist-Checker** - Automatische Pruefung der Server-IP gegen 22 DNS-Blacklists (Spamhaus, Barracuda, SpamCop, SORBS u.v.m.) mit konfigurierbarem Pruefintervall und E-Mail-Alarm bei Listings. Eigene Server-IP wird automatisch aus der Postfix-Konfiguration gelesen. RBL-Status-Indikator auf dem Dashboard
 - **Oeffentliche Abuse-Seite** - Professionelle Abuse- & Postmaster-Infoseite unter dem Mail-Hostnamen (RFC 2142 konform), mit admin-pflegbaren Kontaktdaten, Systeminformationen und Impressum-Link. Zweisprachig (DE/EN) mit Sprachwechsel im Header
 - **Einklappbare Seitenleiste** - Sidebar per Toggle-Button ein-/ausklappbar, Zustand wird gespeichert
 - **Docker-basiert** - Vier Container (Caddy, Admin-Panel, Open-Mail-Relay, Firewall), einfach zu deployen
@@ -46,6 +47,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
                     │      ├── SMTP-Benutzerverwaltung        │
                     │      ├── IP-Sperren (Firewall + Postfix)│
                     │      ├── Mail-Drosselung & IP-Warmup    │
+                    │      ├── RBL-Blacklist-Checker           │
                     │      ├── TLS-Zertifikat-Status          │
                     │      └── Benutzer- & Konfiguration      │
                     └─────────────────────────────────────────┘
@@ -104,6 +106,7 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 ### Dashboard
 - Tagesstatistiken (gesendet, verzoegert, zurueckgewiesen, abgelehnt)
 - Erfolgsrate
+- **RBL-Status-Indikator** — Zeigt aktuellen Blacklist-Status (CLEAN/LISTINGS/nicht geprueft), Klick navigiert zur RBL-Pruefung
 - Zustellungsverlauf als Diagramm (letzte 24h)
 - Aktuelle Warteschlange
 - Letzte Aktivitaet (Live-Feed) mit Quellenverfolgung (Client-IP / SMTP-Benutzer) und aufklappbaren Details
@@ -144,6 +147,17 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - Transport-Regeln mit CRUD-Verwaltung
 - Fail-Open-Design: Bei Fehler wird Mail nie blockiert
 - Warmup-Status auch auf dem Dashboard sichtbar
+
+### RBL-Blacklist-Checker
+- **Automatische Pruefung** der Server-IP gegen 22 DNS-Blacklists (Spamhaus ZEN/SBL/XBL/PBL, Barracuda, SpamCop, SORBS, UCEPROTECT 1-3, CBL, PSBL, Mailspike, SpamRATS, JustSpam u.a.)
+- Eigener Hostname und IP werden automatisch aus der Postfix-Konfiguration gelesen
+- Konfigurierbares Pruefintervall (Standard: alle 6 Stunden), DNS-Timeout einstellbar
+- E-Mail-Alarm bei Blacklist-Eintraegen mit detailliertem Report (neue/entfernte Listings, Uebersicht)
+- Option "Nur bei Aenderung" — E-Mail nur bei Statuswechsel
+- Test-Mail-Funktion zum Pruefen der E-Mail-Konfiguration
+- Zusaetzliche Server konfigurierbar fuer Multi-IP-Setups
+- False-Positive-Filterung fuer Spamhaus Public-DNS-Resolver-Antworten
+- **Dashboard-Indikator** — Clickbare Statuskarte zeigt gruen (CLEAN), rot (LISTINGS) oder grau (nicht geprueft)
 
 ### Protokoll
 - Vollstaendige Mail-Event-Historie mit Filterung nach Status, Zeitraum und Freitextsuche

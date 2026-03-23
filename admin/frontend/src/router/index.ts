@@ -50,6 +50,11 @@ const router = createRouter({
           component: () => import('../views/KonfigurationView.vue'),
         },
         {
+          path: 'rbl-pruefung',
+          name: 'rbl-checker',
+          component: () => import('../views/RblCheckerView.vue'),
+        },
+        {
           path: 'benutzer',
           name: 'users',
           component: () => import('../views/BenutzerView.vue'),
