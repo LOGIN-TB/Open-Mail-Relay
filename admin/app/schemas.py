@@ -483,10 +483,6 @@ class DnsCheckSettings(BaseModel):
     last_check_time: str = ""
 
 
-class DnsCheckSettingsUpdate(BaseModel):
-    dkim_selector: str
-
-
 class DnsCheckStatus(BaseModel):
     checked: bool = False
     spf_ok: bool = False

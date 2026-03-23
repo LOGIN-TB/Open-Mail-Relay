@@ -12,7 +12,7 @@ from app.services.postfix_service import (
     update_main_cf,
     get_networks_count,
 )
-from app.services.docker_service import reload_postfix, restart_caddy
+from app.services.docker_service import reload_postfix, restart_caddy, list_containers, restart_container
 from app.services.cert_service import get_tls_status, sync_certs_to_postfix, wait_for_cert
 
 router = APIRouter()
@@ -215,3 +215,28 @@ def update_timezone(
     db.commit()
 
     return TimezoneSettings(timezone=body.timezone)
+
+
+@router.get("/containers")
+def get_containers(user: User = Depends(get_current_user)):
+    return list_containers()
+
+
+@router.post("/containers/{name}/restart")
+def restart_container_endpoint(
+    name: str,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    success, message = restart_container(name)
+    db.add(AuditLog(
+        user_id=user.id,
+        action="container_restart",
+        details=f"Container '{name}': {message}",
+        ip_address=request.client.host if request.client else None,
+    ))
+    db.commit()
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    return {"message": message}

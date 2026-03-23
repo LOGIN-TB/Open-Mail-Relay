@@ -105,8 +105,13 @@ def _default_dkim_selector() -> str:
 # Settings
 # ---------------------------------------------------------------------------
 
+def get_dkim_selector() -> str:
+    """Always derive DKIM selector from hostname — not user-configurable."""
+    return _default_dkim_selector()
+
+
 def get_dns_check_settings(db: Session) -> dict:
-    dkim_selector = _get_setting(db, "dns_check_dkim_selector") or _default_dkim_selector()
+    dkim_selector = get_dkim_selector()
     last_check_time = _get_setting(db, "dns_check_last_check_time")
     last_results = None
     raw = _get_setting(db, "dns_check_last_results")
@@ -120,12 +125,6 @@ def get_dns_check_settings(db: Session) -> dict:
         "last_results": last_results,
         "last_check_time": last_check_time,
     }
-
-
-def update_dns_check_settings(db: Session, dkim_selector: str) -> dict:
-    _set_setting(db, "dns_check_dkim_selector", dkim_selector.strip())
-    db.commit()
-    return get_dns_check_settings(db)
 
 
 # ---------------------------------------------------------------------------
@@ -436,15 +435,13 @@ def check_dkim(domain: str, selector: str) -> dict:
 # Orchestrator
 # ---------------------------------------------------------------------------
 
-def run_dns_check(db: Session, dkim_selector: str | None = None) -> dict:
+def run_dns_check(db: Session) -> dict:
     """Run all DNS checks and persist results."""
     info = get_server_info()
     hostname = info["hostname"]
     server_ip = info["ip"]
     domain = info["domain"]
-
-    if not dkim_selector:
-        dkim_selector = _get_setting(db, "dns_check_dkim_selector") or _default_dkim_selector()
+    dkim_selector = get_dkim_selector()
 
     spf = check_spf(domain, server_ip, hostname)
     dmarc = check_dmarc(domain)

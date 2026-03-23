@@ -110,6 +110,7 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - Tagesstatistiken (gesendet, verzoegert, zurueckgewiesen, abgelehnt)
 - Erfolgsrate
 - **RBL-Status-Indikator** — Zeigt aktuellen Blacklist-Status (CLEAN/LISTINGS/nicht geprueft), Klick navigiert zur RBL-Pruefung
+- **DNS-Status-Indikator** — Zeigt SPF/DMARC/DKIM Status (alle OK/Probleme/nicht geprueft), Klick navigiert zur DNS-Pruefung
 - Zustellungsverlauf als Diagramm (letzte 24h)
 - Aktuelle Warteschlange
 - Letzte Aktivitaet (Live-Feed) mit Quellenverfolgung (Client-IP / SMTP-Benutzer) und aufklappbaren Details
@@ -129,6 +130,7 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - Manuelle Zertifikat-Synchronisierung und Postfix-Reload
 - **Zeitzone** konfigurierbar fuer alle Zeitstempel-Anzeigen im Admin-Panel (Standard: Europe/Berlin)
 - **Abuse-Seite** — Pflege der oeffentlichen Abuse- & Postmaster-Informationsseite (Kontaktdaten, Systeminformationen, Texte in DE und EN). Vorschau-Link oeffnet die Seite direkt
+- **Container-Verwaltung** — Status-Uebersicht und Neustart-Funktion fuer alle Docker-Container (Mail-Server, Caddy, Firewall) direkt aus dem Admin-Panel
 
 ### SMTP-Benutzer (SASL)
 - SMTP-Benutzer anlegen, aktivieren/deaktivieren, loeschen

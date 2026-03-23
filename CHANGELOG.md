@@ -12,7 +12,7 @@ Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   - **DMARC-Check** — prueft Existenz und Gueltigkeit des DMARC-Records inkl. Policy-Parsing
   - **DKIM-Check** — prueft ob ein DKIM-Public-Key-Record fuer den konfigurierten Selector existiert
   - Copy-Paste DNS-Eintraege fuer fehlende Records (SPF, DMARC) werden automatisch generiert
-  - DKIM-Selector automatisch aus Hostname abgeleitet (z.B. `relay2.spamgo.de` → Selector `relay2`) — ermoeglicht mehrere Mail-Server auf derselben Domain
+  - DKIM-Selector automatisch aus Hostname abgeleitet (z.B. `relay2.spamgo.de` → Selector `relay2`) — ermoeglicht mehrere Mail-Server auf derselben Domain, nicht manuell aenderbar
   - Test beliebig oft wiederholbar per Button
 - **DKIM-Signing mit OpenDKIM** — Ausgehende E-Mails werden automatisch DKIM-signiert
   - OpenDKIM als Milter in den Postfix-Container integriert
@@ -21,15 +21,19 @@ Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   - DKIM Public Key im Admin-Panel anzeigbar mit Copy-Button fuer DNS-Eintrag
   - Schluessel loeschen und neu generieren ueber Admin-Panel moeglich
 - **Dashboard DNS-Status-Indikator** — Clickbare Statuskarte zeigt gruen (alle Records OK), rot (Probleme) oder grau (nicht geprueft)
+- **Container-Verwaltung** — Neue Sektion in der Konfigurationsseite zum Neustart einzelner Docker-Container (Mail-Server, Caddy, Firewall) mit Status-Anzeige und Audit-Logging
+  - Restart-Button auch direkt auf der DNS-Pruefung-Seite bei fehlendem DKIM-Schluessel (generiert Key beim Neustart automatisch)
 - Neue API-Endpunkte unter `/api/dns-check`:
-  - `GET /api/dns-check` — Einstellungen und letzte Ergebnisse
-  - `PUT /api/dns-check` — DKIM-Selector speichern
+  - `GET /api/dns-check` — Server-Info und letzte Ergebnisse
   - `POST /api/dns-check/check` — DNS-Pruefung ausfuehren
   - `GET /api/dns-check/status` — Dashboard-Zusammenfassung
   - `GET /api/dns-check/dkim-key` — DKIM Public Key lesen
   - `DELETE /api/dns-check/dkim-key` — DKIM-Schluessel loeschen
+- Neue API-Endpunkte unter `/api/config`:
+  - `GET /api/config/containers` — Status aller verwalteten Container
+  - `POST /api/config/containers/{name}/restart` — Container neu starten
 - Neue Abhaengigkeit: `dnspython>=2.6.0` fuer TXT-Record-Abfragen
-- Audit-Logging fuer DNS-Pruefungen, Einstellungsaenderungen und DKIM-Key-Loeschung
+- Audit-Logging fuer DNS-Pruefungen, DKIM-Key-Loeschung und Container-Neustarts
 
 ## [1.7.0] - 2026-03-23
 

@@ -8,6 +8,7 @@ import ConnectionInfoCard from '../components/config/ConnectionInfo.vue'
 import RetentionSettings from '../components/config/RetentionSettings.vue'
 import TimezoneSettings from '../components/config/TimezoneSettings.vue'
 import AbusePageSettings from '../components/config/AbusePageSettings.vue'
+import ContainerManager from '../components/config/ContainerManager.vue'
 import t from '../i18n/de'
 
 const toast = useToast()
@@ -110,6 +111,7 @@ onMounted(fetchConfig)
     </div>
 
     <AbusePageSettings />
+    <ContainerManager />
   </div>
 </template>
 

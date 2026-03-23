@@ -86,3 +86,63 @@ def get_container_status() -> dict:
         "running": container.status == "running",
         "started_at": container.attrs.get("State", {}).get("StartedAt"),
     }
+
+
+# ---------------------------------------------------------------------------
+# Generic container management
+# ---------------------------------------------------------------------------
+
+# Allowed containers (name -> config key)
+CONTAINER_NAMES = {
+    "open-mail-relay": settings.MAIL_RELAY_CONTAINER,
+    "caddy": settings.CADDY_CONTAINER,
+    "firewall": settings.FIREWALL_CONTAINER,
+}
+
+
+def list_containers() -> list[dict]:
+    """Return status of all managed containers."""
+    client = get_docker_client()
+    result = []
+    for label, name in CONTAINER_NAMES.items():
+        try:
+            c = client.containers.get(name)
+            state = c.attrs.get("State", {})
+            result.append({
+                "name": name,
+                "label": label,
+                "status": c.status,
+                "running": c.status == "running",
+                "started_at": state.get("StartedAt", ""),
+                "image": c.image.tags[0] if c.image.tags else "",
+            })
+        except NotFound:
+            result.append({
+                "name": name,
+                "label": label,
+                "status": "not_found",
+                "running": False,
+                "started_at": "",
+                "image": "",
+            })
+    return result
+
+
+def restart_container(name: str) -> tuple[bool, str]:
+    """Restart a managed container by name."""
+    # Validate: only allow known containers
+    allowed = set(CONTAINER_NAMES.values())
+    if name not in allowed:
+        return False, f"Container '{name}' ist nicht verwaltbar"
+
+    client = get_docker_client()
+    try:
+        container = client.containers.get(name)
+        container.restart(timeout=15)
+        logger.info("Container '%s' restarted", name)
+        return True, f"Container '{name}' wurde neu gestartet"
+    except NotFound:
+        return False, f"Container '{name}' nicht gefunden"
+    except APIError as e:
+        logger.error("Container restart error for '%s': %s", name, e)
+        return False, str(e)

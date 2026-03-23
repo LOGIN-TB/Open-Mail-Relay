@@ -7,21 +7,19 @@ import t from '../i18n/de'
 const toast = useToast()
 
 const loading = ref(false)
-const saving = ref(false)
 const checking = ref(false)
-
-// Settings
-const dkimSelector = ref('default')
 
 // Server info (auto-detected)
 const hostname = ref('')
 const serverIp = ref('')
 const domain = ref('')
+const dkimSelector = ref('')
 
 // DKIM key info
 const dkimKey = ref<{ exists: boolean; dns_record: string; dns_name: string; selector: string } | null>(null)
 const deletingKey = ref(false)
 const confirmDelete = ref(false)
+const restartingMail = ref(false)
 
 // Results
 const results = ref<any>(null)
@@ -31,6 +29,9 @@ async function fetchDkimKey() {
   try {
     const { data } = await api.get('/dns-check/dkim-key')
     dkimKey.value = data
+    if (data.selector && !dkimSelector.value) {
+      dkimSelector.value = data.selector
+    }
   } catch {
     // ignore
   }
@@ -51,11 +52,25 @@ async function deleteDkimKey() {
   }
 }
 
+async function restartMailContainer() {
+  restartingMail.value = true
+  try {
+    const { data } = await api.post('/config/containers/open-mail-relay/restart')
+    toast.add({ severity: 'success', summary: t.common.success, detail: data.message, life: 3000 })
+    // Wait for container to come back and regenerate key
+    setTimeout(fetchDkimKey, 5000)
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
+  } finally {
+    restartingMail.value = false
+  }
+}
+
 async function fetchSettings() {
   loading.value = true
   try {
     const { data } = await api.get('/dns-check')
-    dkimSelector.value = data.dkim_selector || 'default'
+    dkimSelector.value = data.dkim_selector || ''
     lastCheckTime.value = data.last_check_time || ''
     results.value = data.last_results || null
     if (results.value) {
@@ -65,19 +80,6 @@ async function fetchSettings() {
     }
   } finally {
     loading.value = false
-  }
-}
-
-async function saveSettings() {
-  saving.value = true
-  try {
-    const { data } = await api.put('/dns-check', { dkim_selector: dkimSelector.value })
-    dkimSelector.value = data.dkim_selector || 'default'
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.dns.settingsSaved, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    saving.value = false
   }
 }
 
@@ -193,26 +195,10 @@ onMounted(() => {
     <h2>{{ t.dns.title }}</h2>
     <p class="subtitle">{{ t.dns.subtitle }}</p>
 
-    <!-- Settings Card -->
+    <!-- Server Info Card -->
     <div class="card">
-      <h3>{{ t.dns.settings }}</h3>
-
-      <div class="form-grid">
-        <div class="form-row">
-          <label>{{ t.dns.dkimSelector }}</label>
-          <input
-            type="text"
-            v-model="dkimSelector"
-            :placeholder="t.dns.dkimSelectorPlaceholder"
-            class="input-md"
-          >
-        </div>
-      </div>
-      <p class="hint">{{ t.dns.dkimSelectorHint }}</p>
-
-      <!-- Server info -->
-      <h4>{{ t.dns.serverInfo }}</h4>
-      <div class="server-info-box" v-if="hostname || serverIp || domain">
+      <h3>{{ t.dns.serverInfo }}</h3>
+      <div class="server-info-box" v-if="hostname || serverIp || domain || dkimSelector">
         <div class="server-info-item">
           <span class="server-info-label">{{ t.dns.hostname }}:</span>
           <code>{{ hostname }}</code>
@@ -225,12 +211,14 @@ onMounted(() => {
           <span class="server-info-label">{{ t.dns.domain }}:</span>
           <code>{{ domain }}</code>
         </div>
+        <div class="server-info-item">
+          <span class="server-info-label">{{ t.dns.dkimSelector }}:</span>
+          <code>{{ dkimSelector }}</code>
+        </div>
       </div>
+      <p class="hint" style="margin-top: 0.5rem">{{ t.dns.serverInfoHint }}</p>
 
       <div class="button-bar">
-        <button class="btn btn-secondary" @click="saveSettings" :disabled="saving">
-          <i class="pi pi-save"></i> {{ saving ? t.common.loading : t.common.save }}
-        </button>
         <button class="btn btn-primary" @click="runCheck" :disabled="checking">
           <i :class="checking ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"></i>
           {{ checking ? t.dns.checking : t.dns.checkNow }}
@@ -292,6 +280,15 @@ onMounted(() => {
       <div class="empty-state" style="padding: 1.5rem">
         <i class="pi pi-key" style="font-size: 1.5rem; color: #94a3b8"></i>
         <p>{{ t.dns.dkimKeyMissing }}</p>
+        <button
+          class="btn btn-primary"
+          style="margin-top: 0.75rem"
+          @click="restartMailContainer"
+          :disabled="restartingMail"
+        >
+          <i :class="restartingMail ? 'pi pi-spin pi-spinner' : 'pi pi-replay'"></i>
+          {{ t.dns.restartMailContainer }}
+        </button>
       </div>
     </div>
 
@@ -411,47 +408,9 @@ onMounted(() => {
   color: #475569;
 }
 
-.form-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.form-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.form-row > label:first-child {
-  width: 160px;
-  flex-shrink: 0;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #334155;
-}
-
 .hint {
   font-size: 0.8rem;
   color: #94a3b8;
-  margin-top: 0.25rem;
-}
-
-input[type="text"] {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-input:focus {
-  border-color: #3b82f6;
-}
-
-.input-md {
-  width: 280px;
 }
 
 /* Server info box */
