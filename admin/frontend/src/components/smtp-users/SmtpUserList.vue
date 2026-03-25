@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
-import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import t from '../../i18n/de'
 import { formatDateTimeShort } from '../../utils/dateFormat'
@@ -11,43 +9,36 @@ export interface SmtpUserItem {
   is_active: boolean
   company: string | null
   service: string | null
+  mail_domain: string | null
+  contact_email: string | null
+  receive_reports: boolean
+  package_id: number | null
+  package_name: string | null
   created_at: string | null
   created_by: number | null
   last_used_at: string | null
 }
 
+export interface PackageOption {
+  id: number
+  name: string
+}
+
 defineProps<{
   users: SmtpUserItem[]
+  packages: PackageOption[]
   loading: boolean
 }>()
 
 const emit = defineEmits<{
+  edit: [user: SmtpUserItem]
   toggleActive: [user: SmtpUserItem]
   regeneratePassword: [user: SmtpUserItem]
   downloadPdf: [user: SmtpUserItem]
+  sendCredentials: [user: SmtpUserItem]
+  sendUsageReport: [user: SmtpUserItem]
   delete: [user: SmtpUserItem]
-  updateField: [userId: number, field: string, value: string]
 }>()
-
-const editingCell = ref<{ userId: number; field: string } | null>(null)
-const editValue = ref('')
-
-async function startEdit(userId: number, field: string, currentValue: string | null) {
-  editingCell.value = { userId, field }
-  editValue.value = currentValue || ''
-  await nextTick()
-  const input = document.querySelector('.inline-edit input') as HTMLInputElement | null
-  input?.focus()
-}
-
-function commitEdit(userId: number, field: string) {
-  emit('updateField', userId, field, editValue.value.trim())
-  editingCell.value = null
-}
-
-function isEditing(userId: number, field: string): boolean {
-  return editingCell.value?.userId === userId && editingCell.value?.field === field
-}
 
 function formatDate(ts: string | null): string {
   return formatDateTimeShort(ts)
@@ -63,40 +54,30 @@ function formatDate(ts: string | null): string {
         <tr>
           <th>{{ t.smtpUsers.username }}</th>
           <th>{{ t.smtpUsers.company }}</th>
+          <th>{{ t.smtpUsers.mailDomain }}</th>
+          <th>{{ t.smtpUsers.contactEmail }}</th>
           <th>{{ t.smtpUsers.service }}</th>
+          <th>{{ t.smtpUsers.package }}</th>
           <th>{{ t.smtpUsers.status }}</th>
           <th>{{ t.smtpUsers.created }}</th>
           <th>{{ t.smtpUsers.lastUsed }}</th>
-          <th style="width: 220px">{{ t.smtpUsers.actions }}</th>
+          <th style="width: 300px">{{ t.smtpUsers.actions }}</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="user in users" :key="user.id">
           <td><strong>{{ user.username }}</strong></td>
-          <td class="editable-cell" @click="!isEditing(user.id, 'company') && startEdit(user.id, 'company', user.company)">
-            <InputText
-              v-if="isEditing(user.id, 'company')"
-              v-model="editValue"
-              size="small"
-              class="inline-edit"
-              :placeholder="t.smtpUsers.companyPlaceholder"
-              @blur="commitEdit(user.id, 'company')"
-              @keydown.enter="($event.target as HTMLInputElement).blur()"
-            />
-            <span v-else class="cell-text">{{ user.company || '-' }}</span>
+          <td class="text-cell">{{ user.company || '-' }}</td>
+          <td class="text-cell">
+            <span v-if="user.mail_domain" :title="user.mail_domain">{{ user.mail_domain }}</span>
+            <span v-else>-</span>
           </td>
-          <td class="editable-cell" @click="!isEditing(user.id, 'service') && startEdit(user.id, 'service', user.service)">
-            <InputText
-              v-if="isEditing(user.id, 'service')"
-              v-model="editValue"
-              size="small"
-              class="inline-edit"
-              :placeholder="t.smtpUsers.servicePlaceholder"
-              @blur="commitEdit(user.id, 'service')"
-              @keydown.enter="($event.target as HTMLInputElement).blur()"
-            />
-            <span v-else class="cell-text">{{ user.service || '-' }}</span>
+          <td class="text-cell">
+            <span v-if="user.contact_email" :title="user.contact_email">{{ user.contact_email }}</span>
+            <span v-else>-</span>
           </td>
+          <td class="text-cell">{{ user.service || '-' }}</td>
+          <td class="text-cell">{{ user.package_name || t.smtpUsers.noPackage }}</td>
           <td>
             <span v-if="user.is_active" class="badge-active">{{ t.smtpUsers.active }}</span>
             <span v-else class="badge-inactive">{{ t.smtpUsers.inactive }}</span>
@@ -105,6 +86,14 @@ function formatDate(ts: string | null): string {
           <td class="date-col">{{ user.last_used_at ? formatDate(user.last_used_at) : '-' }}</td>
           <td>
             <div class="actions">
+              <Button
+                icon="pi pi-pencil"
+                severity="info"
+                size="small"
+                text
+                :title="t.smtpUsers.editUser"
+                @click="emit('edit', user)"
+              />
               <Button
                 :icon="user.is_active ? 'pi pi-ban' : 'pi pi-check'"
                 :severity="user.is_active ? 'warn' : 'success'"
@@ -130,6 +119,24 @@ function formatDate(ts: string | null): string {
                 @click="emit('downloadPdf', user)"
               />
               <Button
+                icon="pi pi-envelope"
+                severity="info"
+                size="small"
+                text
+                :disabled="!user.contact_email"
+                :title="user.contact_email ? t.smtpUsers.sendCredentials : t.smtpUsers.noContactEmail"
+                @click="emit('sendCredentials', user)"
+              />
+              <Button
+                icon="pi pi-chart-bar"
+                severity="info"
+                size="small"
+                text
+                :disabled="!user.contact_email || !user.package_id"
+                :title="user.contact_email && user.package_id ? t.smtpUsers.sendUsageReport : t.smtpUsers.sendUsageReportDisabled"
+                @click="emit('sendUsageReport', user)"
+              />
+              <Button
                 icon="pi pi-trash"
                 severity="danger"
                 size="small"
@@ -152,6 +159,7 @@ function formatDate(ts: string | null): string {
   padding: 1.25rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   border: 1px solid #e2e8f0;
+  overflow-x: auto;
 }
 
 .loading,
@@ -173,6 +181,10 @@ function formatDate(ts: string | null): string {
   color: #64748b;
   font-weight: 600;
   font-size: 0.85rem;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: white;
 }
 
 .smtp-table td {
@@ -180,28 +192,19 @@ function formatDate(ts: string | null): string {
   border-bottom: 1px solid #f1f5f9;
 }
 
-.editable-cell {
-  cursor: pointer;
-  min-width: 120px;
-}
-
-.editable-cell:hover .cell-text {
-  color: #3b82f6;
-  text-decoration: underline dotted;
-}
-
-.cell-text {
+.text-cell {
   font-size: 0.85rem;
   color: #475569;
-}
-
-.inline-edit {
-  width: 100%;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .date-col {
   font-size: 0.8rem;
   color: #64748b;
+  white-space: nowrap;
 }
 
 .badge-active {

@@ -9,14 +9,32 @@ import SmtpUserCredentials from '../components/smtp-users/SmtpUserCredentials.vu
 import t from '../i18n/de'
 
 import type { SmtpUserItem } from '../components/smtp-users/SmtpUserList.vue'
+import type { SmtpUserEditData } from '../components/smtp-users/SmtpUserForm.vue'
 
 const toast = useToast()
 const confirm = useConfirm()
 
+interface PackageOption {
+  id: number
+  name: string
+}
+
 const users = ref<SmtpUserItem[]>([])
+const packages = ref<PackageOption[]>([])
 const loading = ref(false)
-const showForm = ref(false)
+
+// Dialog state: null = closed, null user = create, object = edit
+const dialogVisible = ref(false)
+const dialogUser = ref<SmtpUserEditData | null>(null)
+
 const credentialsUser = ref<{ id: number; username: string; password: string } | null>(null)
+
+async function fetchPackages() {
+  try {
+    const { data } = await api.get('/billing/packages')
+    packages.value = data.map((p: any) => ({ id: p.id, name: p.name }))
+  } catch { /* ignore */ }
+}
 
 async function fetchUsers() {
   loading.value = true
@@ -28,26 +46,44 @@ async function fetchUsers() {
   }
 }
 
-async function createUser(payload: { username: string; company: string; service: string }) {
-  try {
-    const { data } = await api.post('/smtp-users', {
-      username: payload.username,
-      company: payload.company || null,
-      service: payload.service || null,
-    })
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.userCreated, life: 3000 })
-    showForm.value = false
-    credentialsUser.value = { id: data.id, username: data.username, password: data.password }
-    await fetchUsers()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+function openCreate() {
+  dialogUser.value = null
+  dialogVisible.value = true
 }
 
-async function updateField(userId: number, field: string, value: string) {
+function openEdit(user: SmtpUserItem) {
+  dialogUser.value = {
+    id: user.id,
+    username: user.username,
+    company: user.company,
+    service: user.service,
+    mail_domain: user.mail_domain,
+    contact_email: user.contact_email,
+    receive_reports: user.receive_reports,
+    package_id: user.package_id,
+  }
+  dialogVisible.value = true
+}
+
+function closeDialog() {
+  dialogVisible.value = false
+}
+
+async function saveUser(payload: any) {
   try {
-    await api.put(`/smtp-users/${userId}`, { [field]: value || null })
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.userUpdated, life: 3000 })
+    if (payload.id) {
+      // Update
+      const { id, ...body } = payload
+      await api.put(`/smtp-users/${id}`, body)
+      toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.userUpdated, life: 3000 })
+      dialogVisible.value = false
+    } else {
+      // Create
+      const { data } = await api.post('/smtp-users', payload)
+      toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.userCreated, life: 3000 })
+      dialogVisible.value = false
+      credentialsUser.value = { id: data.id, username: data.username, password: data.password }
+    }
     await fetchUsers()
   } catch (e: any) {
     toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
@@ -101,6 +137,42 @@ async function downloadPdf(user: SmtpUserItem) {
   }
 }
 
+function confirmSendUsageReport(user: SmtpUserItem) {
+  confirm.require({
+    message: `${t.smtpUsers.confirmSendUsageReport} ${user.contact_email}?`,
+    header: t.smtpUsers.sendUsageReport,
+    icon: 'pi pi-chart-bar',
+    accept: () => sendUsageReport(user),
+  })
+}
+
+async function sendUsageReport(user: SmtpUserItem) {
+  try {
+    await api.post(`/smtp-users/${user.id}/send-usage-report`)
+    toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.usageReportSent, life: 3000 })
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
+  }
+}
+
+function confirmSendCredentials(user: SmtpUserItem) {
+  confirm.require({
+    message: `${t.smtpUsers.confirmSendCredentials} ${user.contact_email}?`,
+    header: t.smtpUsers.sendCredentials,
+    icon: 'pi pi-envelope',
+    accept: () => sendCredentials(user),
+  })
+}
+
+async function sendCredentials(user: SmtpUserItem) {
+  try {
+    await api.post(`/smtp-users/${user.id}/send-credentials`)
+    toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.credentialsSent, life: 3000 })
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
+  }
+}
+
 function confirmDelete(user: SmtpUserItem) {
   confirm.require({
     message: t.smtpUsers.confirmDelete,
@@ -121,32 +193,40 @@ async function deleteUser(userId: number) {
   }
 }
 
-onMounted(fetchUsers)
+onMounted(() => {
+  fetchUsers()
+  fetchPackages()
+})
 </script>
 
 <template>
   <div class="smtp-users-page">
     <div class="page-header">
       <h2>{{ t.smtpUsers.title }}</h2>
-      <button class="btn-primary" @click="showForm = true">
+      <button class="btn-primary" @click="openCreate">
         <i class="pi pi-plus"></i> {{ t.smtpUsers.addUser }}
       </button>
     </div>
 
-    <SmtpUserForm
-      v-if="showForm"
-      @save="createUser"
-      @cancel="showForm = false"
-    />
-
     <SmtpUserList
       :users="users"
+      :packages="packages"
       :loading="loading"
+      @edit="openEdit"
       @toggle-active="toggleActive"
       @regenerate-password="confirmRegenerate"
       @download-pdf="downloadPdf"
+      @send-credentials="confirmSendCredentials"
+      @send-usage-report="confirmSendUsageReport"
       @delete="confirmDelete"
-      @update-field="updateField"
+    />
+
+    <SmtpUserForm
+      :visible="dialogVisible"
+      :user="dialogUser"
+      :packages="packages"
+      @save="saveUser"
+      @close="closeDialog"
     />
 
     <SmtpUserCredentials

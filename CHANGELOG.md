@@ -4,6 +4,61 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.0.0] - 2026-03-25
+
+### Hinzugefuegt
+- **Erweiterte SMTP-Benutzerverwaltung** — Neue Felder fuer Kunden-Mail-Domain (`mail_domain`) und Kontakt-E-Mail (`contact_email`) pro SMTP-Benutzer
+  - Einheitlicher PrimeVue-Dialog fuer Neuanlage und Bearbeitung (ersetzt separates Formular und Inline-Editing)
+  - Bearbeiten-Button (Stift-Icon) in der Aktionsspalte
+  - Neues Feld `receive_reports` (Checkbox) — steuert ob Kunde woechentliche Kontingent-Berichte erhaelt
+- **SPF-Record Pruefung im PDF** — Bei SMTP-Benutzern mit hinterlegter Mail-Domain wird beim PDF-Download live der SPF-Record geprueft
+  - Drei Faelle: SPF fehlt (Vorschlag), SPF muss erweitert werden (aktueller + empfohlener Record), SPF korrekt (Bestaetigung)
+  - Eigene Seite 2 im PDF mit farbcodierten Hinweisboxen
+- **Betreiber-Info im PDF** — Relay-Betreiber (Name, E-Mail, Telefon) aus Konfiguration wird im PDF-Konfigurationsblatt angezeigt
+- **Zugangsdaten per E-Mail versenden** — Neuer Button (Briefumschlag-Icon) sendet SMTP-Zugangsdaten inkl. PDF-Anhang direkt an die Kontakt-E-Mail des Kunden
+  - HTML-E-Mail mit Betreiber-Signatur, Sicherheitshinweis und PDF-Attachment
+  - Nur aktiv wenn Kontakt-E-Mail hinterlegt
+- **Woechentliche Kontingent-Berichte** — Automatischer Versand individueller Nutzungsberichte an Kunden
+  - HTML-E-Mail mit Paketname, Limit, aktuellem Verbrauch, verbleibendem Kontingent und visuellem Fortschrittsbalken
+  - Farbcodierung: gruen (<75%), gelb (75-90%), rot (>90%) mit Warnhinweis
+  - Betreiber-Signatur im Footer
+  - Konfigurierbar: Versandtag (Wochentag) und Ein/Aus in den Abrechnungs-Einstellungen
+  - Kunden koennen ueber Checkbox "Bericht" in der Benutzerverwaltung abgemeldet werden
+- **Manueller Kontingent-Bericht** — Button (Chart-Icon) in der SMTP-Benutzerverwaltung zum sofortigen Versand eines Kontingent-Berichts an einzelne Kunden
+- **Abrechnungs-Einstellungen verbessert** — Zwei nebeneinander liegende Bloecke: "Monatsbericht (intern)" und "Kontingent-Berichte (Kunden)" mit Beschreibung des jeweiligen Zwecks
+- Neue API-Endpunkte:
+  - `POST /api/smtp-users/{id}/send-credentials` — Zugangsdaten per E-Mail senden
+  - `POST /api/smtp-users/{id}/send-usage-report` — Kontingent-Bericht manuell senden
+- Neue Datenbank-Migrationen: 012 (mail_domain, contact_email), 013 (receive_reports)
+- Neuer Service: `spf_check_service.py` — Live-DNS-Lookup fuer Kunden-SPF-Records
+
+### Geaendert
+- PDF-Konfigurationsblatt: Titel "SMTP-Relay Zugangsdaten", Betreiber-Block, Kunden-Block mit Paket statt Dienst, SPF-Seite 2, ueberarbeiteter Sicherheitshinweis
+- SMTP-Benutzer-Tabelle: Neue Spalten (Mail-Domain, Kontakt-E-Mail), Inline-Editing entfernt, Edit-Button hinzugefuegt
+- BillingWorker: Erweitert um woechentlichen Kontingent-Bericht-Versand mit konfigurierbarem Wochentag
+
+## [1.9.0] - 2026-03-25
+
+### Hinzugefuegt
+- **Paket- und Abrechnungssystem** — Neues Feature zur Verwaltung von E-Mail-Paketen und monatlicher Abrechnung pro SMTP-Benutzer
+  - **Paketverwaltung** — Vordefinierte Pakete fuer Transaktions-E-Mails (Trans-S/M/L) und Newsletter (News-S/M/L/XL) mit konfigurierbaren Monatslimits
+  - **Paket-Zuweisung** — Jedem SMTP-Benutzer kann ein Paket zugewiesen werden (Dropdown in Benutzerliste und Erstellformular)
+  - **Monatliche E-Mail-Zaehlung** — Automatische stuendliche Aggregation der gesendeten E-Mails pro Benutzer aus den Mail-Events
+  - **Ueberschuss-Berechnung** — Bei Ueberschreitung des Paketlimits werden automatisch Ext-1K Zusatzpakete (je 1.000 E-Mails) berechnet
+  - **Monatsabrechnung** — Uebersichtsseite mit Monatsauswahl, Benutzer-Verbrauchstabelle, Paketlimits und Zusatzpaket-Anzeige
+  - **Automatischer Monatsbericht** — Am 1. jedes Monats wird der Bericht des Vormonats automatisch per HTML-E-Mail an konfigurierbare Adresse gesendet
+  - **Manueller Berichtversand** — Berichte koennen jederzeit manuell ueber die Abrechnungsseite versendet werden
+  - Eigene Admin-Panel-Seite "Abrechnung" mit drei Bereichen: Pakete, Monatsabrechnung, Einstellungen
+- Neue Datenbanktabellen: `packages`, `user_monthly_usage`, `billing_reports`
+- Neues Feld `package_id` auf `smtp_users` (FK zu Paketen)
+- Neue API-Endpunkte unter `/api/billing`:
+  - `GET/POST/PUT/DELETE /api/billing/packages` — Paket-CRUD
+  - `GET /api/billing/overview` — Monatsabrechnung mit Ueberschuss
+  - `POST /api/billing/overview/refresh` — Zaehlung aktualisieren
+  - `POST /api/billing/report/{year_month}/send` — Bericht versenden
+  - `GET/PUT /api/billing/settings` — Berichts-E-Mail-Einstellungen
+- Background-Worker fuer stuendliche Usage-Aktualisierung und automatischen Monatsversand
+
 ## [1.8.0] - 2026-03-23
 
 ### Hinzugefuegt

@@ -88,6 +88,18 @@ class SystemSetting(Base):
     value = Column(String, nullable=False)
 
 
+class Package(Base):
+    __tablename__ = "packages"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, unique=True, nullable=False)
+    category = Column(String, nullable=False)  # transaction, newsletter, overage
+    monthly_limit = Column(Integer, nullable=False)
+    description = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+
+
 class SmtpUser(Base):
     __tablename__ = "smtp_users"
 
@@ -97,9 +109,33 @@ class SmtpUser(Base):
     is_active = Column(Boolean, default=True)
     company = Column(String, nullable=True)
     service = Column(String, nullable=True)
+    mail_domain = Column(String, nullable=True)
+    contact_email = Column(String, nullable=True)
+    receive_reports = Column(Boolean, default=True, nullable=False, server_default="1")
+    package_id = Column(Integer, ForeignKey("packages.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     last_used_at = Column(DateTime, nullable=True)
+
+
+class UserMonthlyUsage(Base):
+    __tablename__ = "user_monthly_usage"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    smtp_user_id = Column(Integer, ForeignKey("smtp_users.id", ondelete="CASCADE"), nullable=False)
+    year_month = Column(String, nullable=False)
+    sent_count = Column(Integer, default=0)
+    last_updated = Column(DateTime, nullable=True)
+
+
+class BillingReport(Base):
+    __tablename__ = "billing_reports"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    year_month = Column(String, nullable=False)
+    generated_at = Column(DateTime, default=func.now())
+    sent_to = Column(String, nullable=True)
+    report_data = Column(Text, nullable=False)
 
 
 class Network(Base):

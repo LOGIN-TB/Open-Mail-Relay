@@ -192,6 +192,10 @@ class SmtpUserCreate(BaseModel):
     username: str
     company: str | None = None
     service: str | None = None
+    mail_domain: str | None = None
+    contact_email: str | None = None
+    receive_reports: bool = True
+    package_id: int | None = None
 
     @field_validator("username")
     @classmethod
@@ -201,6 +205,17 @@ class SmtpUserCreate(BaseModel):
             raise ValueError("Benutzername muss 4-16 Zeichen lang sein (Buchstaben, Ziffern, - und _)")
         return v
 
+    @field_validator("contact_email")
+    @classmethod
+    def validate_contact_email(cls, v: str | None) -> str | None:
+        if v is not None:
+            v = v.strip()
+            if v == "":
+                return None
+            if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", v):
+                raise ValueError("Ungueltige E-Mail-Adresse")
+        return v
+
 
 class SmtpUserOut(BaseModel):
     id: int
@@ -208,6 +223,11 @@ class SmtpUserOut(BaseModel):
     is_active: bool
     company: str | None = None
     service: str | None = None
+    mail_domain: str | None = None
+    contact_email: str | None = None
+    receive_reports: bool = True
+    package_id: int | None = None
+    package_name: str | None = None
     created_at: datetime | None = None
     created_by: int | None = None
     last_used_at: datetime | None = None
@@ -223,6 +243,21 @@ class SmtpUserUpdate(BaseModel):
     is_active: bool | None = None
     company: str | None = None
     service: str | None = None
+    mail_domain: str | None = None
+    contact_email: str | None = None
+    receive_reports: bool | None = None
+    package_id: int | None = None
+
+    @field_validator("contact_email")
+    @classmethod
+    def validate_contact_email(cls, v: str | None) -> str | None:
+        if v is not None:
+            v = v.strip()
+            if v == "":
+                return None
+            if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", v):
+                raise ValueError("Ungueltige E-Mail-Adresse")
+        return v
 
 
 # --- Audit ---
@@ -491,3 +526,64 @@ class DnsCheckStatus(BaseModel):
     all_ok: bool = False
     last_check_time: str = ""
     issues: int = 0
+
+
+# --- Packages / Billing ---
+
+class PackageCreate(BaseModel):
+    name: str
+    category: str
+    monthly_limit: int
+    description: str | None = None
+
+
+class PackageOut(BaseModel):
+    id: int
+    name: str
+    category: str
+    monthly_limit: int
+    description: str | None = None
+    is_active: bool
+    created_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class PackageUpdate(BaseModel):
+    name: str | None = None
+    category: str | None = None
+    monthly_limit: int | None = None
+    description: str | None = None
+    is_active: bool | None = None
+
+
+class BillingOverviewItem(BaseModel):
+    smtp_user_id: int
+    username: str
+    company: str | None = None
+    package_name: str | None = None
+    package_limit: int | None = None
+    sent_count: int = 0
+    overage_count: int = 0
+    overage_emails: int = 0
+
+
+class BillingOverview(BaseModel):
+    year_month: str
+    items: list[BillingOverviewItem]
+    total_sent: int = 0
+    total_overage_units: int = 0
+
+
+class BillingSettings(BaseModel):
+    billing_report_email: str = ""
+    billing_report_from: str = ""
+    usage_report_enabled: bool = True
+    usage_report_day: str = "monday"
+
+
+class BillingSettingsUpdate(BaseModel):
+    billing_report_email: str | None = None
+    billing_report_from: str | None = None
+    usage_report_enabled: bool | None = None
+    usage_report_day: str | None = None

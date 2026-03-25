@@ -15,6 +15,7 @@ const navItems = [
   { label: t.nav.networks, icon: 'pi pi-globe', to: '/netzwerke' },
   { label: t.nav.ipBans, icon: 'pi pi-ban', to: '/ip-sperren' },
   { label: t.nav.smtpUsers, icon: 'pi pi-key', to: '/smtp-benutzer' },
+  { label: t.nav.billing, icon: 'pi pi-receipt', to: '/abrechnung' },
   { label: t.nav.throttling, icon: 'pi pi-gauge', to: '/drosselung' },
   { label: t.nav.config, icon: 'pi pi-cog', to: '/konfiguration' },
   { label: t.nav.rblChecker, icon: 'pi pi-shield', to: '/rbl-pruefung' },

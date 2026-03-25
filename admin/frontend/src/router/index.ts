@@ -40,6 +40,11 @@ const router = createRouter({
           component: () => import('../views/SmtpBenutzerView.vue'),
         },
         {
+          path: 'abrechnung',
+          name: 'billing',
+          component: () => import('../views/AbrechnungView.vue'),
+        },
+        {
           path: 'drosselung',
           name: 'throttling',
           component: () => import('../views/DrosselungView.vue'),
