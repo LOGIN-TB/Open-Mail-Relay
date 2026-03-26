@@ -47,7 +47,7 @@ def check_customer_spf(mail_domain: str, relay_domain: str) -> dict:
     txt_records = _resolve_txt(mail_domain)
     spf_records = [r for r in txt_records if r.startswith("v=spf1")]
 
-    include_value = f"include:{relay_domain}"
+    include_value = f"include:spf.{relay_domain}"
 
     if not spf_records:
         return {
@@ -60,8 +60,8 @@ def check_customer_spf(mail_domain: str, relay_domain: str) -> dict:
 
     current = spf_records[0]
 
-    # Check if relay domain is already included
-    if relay_domain in current:
+    # Check if relay SPF subdomain is already included
+    if f"spf.{relay_domain}" in current:
         return {
             "mail_domain": mail_domain,
             "relay_domain": relay_domain,
