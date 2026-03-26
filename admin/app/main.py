@@ -21,6 +21,8 @@ from app.routers.abuse_router import public_router as abuse_public_router, admin
 from app.routers import rbl_router
 from app.routers import dns_check_router
 from app.routers import billing_router
+from app.routers import portal_router
+from app.routers.portal_router import portal_auth_middleware, settings_router as portal_settings_router
 from app.services.stats_collector import StatsCollector
 from app.services.sasl_service import sync_dovecot_users
 from app.services.policy_server import PolicyServer
@@ -273,6 +275,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from starlette.middleware.base import BaseHTTPMiddleware
+app.add_middleware(BaseHTTPMiddleware, dispatch=portal_auth_middleware)
+
 # API Routers
 app.include_router(auth_router.router, prefix="/api/auth", tags=["auth"])
 app.include_router(dashboard_router.router, prefix="/api/dashboard", tags=["dashboard"])
@@ -286,6 +291,8 @@ app.include_router(abuse_admin_router, prefix="/api/abuse-settings", tags=["abus
 app.include_router(rbl_router.router, prefix="/api/rbl", tags=["rbl"])
 app.include_router(dns_check_router.router, prefix="/api/dns-check", tags=["dns-check"])
 app.include_router(billing_router.router, prefix="/api/billing", tags=["billing"])
+app.include_router(portal_router.router, prefix="/api/portal", tags=["portal"])
+app.include_router(portal_settings_router, prefix="/api/portal-settings", tags=["portal-settings"])
 
 # Public abuse page (must be before the SPA catch-all)
 app.include_router(abuse_public_router, tags=["public"])

@@ -8,6 +8,7 @@ import ConnectionInfoCard from '../components/config/ConnectionInfo.vue'
 import RetentionSettings from '../components/config/RetentionSettings.vue'
 import TimezoneSettings from '../components/config/TimezoneSettings.vue'
 import AbusePageSettings from '../components/config/AbusePageSettings.vue'
+import PortalApiSettings from '../components/config/PortalApiSettings.vue'
 import ContainerManager from '../components/config/ContainerManager.vue'
 import t from '../i18n/de'
 
@@ -111,6 +112,7 @@ onMounted(fetchConfig)
     </div>
 
     <AbusePageSettings />
+    <PortalApiSettings />
     <ContainerManager />
   </div>
 </template>

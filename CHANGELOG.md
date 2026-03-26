@@ -4,6 +4,26 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.1.0] - 2026-03-26
+
+### Hinzugefuegt
+- **Portal-API fuer externes Kundenportal** — Neuer API-Router (`/api/portal`) mit 7 Endpunkten fuer das externe Kundenportal (my.spamgo.de)
+  - `GET /api/portal/health` — Health-Check mit Server-Hostname und Version
+  - `GET /api/portal/lookup?email=...` — Kundensuche per Kontakt-E-Mail (case-insensitive, aktive + inaktive Benutzer)
+  - `GET /api/portal/stats/{id}` — Zustellstatistiken pro SMTP-Benutzer (heute, 24h-Verlauf stuendlich, 30-Tage-Verlauf taeglich)
+  - `GET /api/portal/dns-check/{id}` — SPF/DKIM/DMARC-Pruefung fuer die Mail-Domain des SMTP-Benutzers
+  - `POST /api/portal/reset-password/{id}` — SMTP-Passwort zuruecksetzen mit Dovecot-Synchronisierung
+  - `GET /api/portal/config-pdf/{id}` — PDF-Konfigurationsblatt als Download
+  - `GET /api/portal/rbl-status` — Aktueller RBL-Blacklist-Status des Servers
+- **Portal-API Absicherung** — Doppelte Authentifizierung per IP-Whitelist und API-Key (Header `X-Portal-API-Key`)
+- **Portal-API Einstellungen im Admin-UI** — Neue Settings-Card auf der Konfigurationsseite
+  - API-Schluessel Generator (64-Zeichen Hex-Token)
+  - IP-Whitelist Verwaltung (kommaseparierte Liste)
+  - Kopierbarer Konfigurations-Block (`RELAY_API_URL`, `RELAY_API_KEY`, `RELAY_SERVER`) fuer fehlerfreie Uebertragung ins Portal
+  - Alle Einstellungen in der Datenbank gespeichert (kein Container-Neustart noetig)
+- Neuer Service: `portal_router.py` — Portal-API Endpunkte und Admin-Settings-Verwaltung via SystemSetting
+- Neue Frontend-Komponente: `PortalApiSettings.vue` — Settings-Card mit Key-Generator und Copy-to-Clipboard
+
 ## [2.0.0] - 2026-03-25
 
 ### Hinzugefuegt
