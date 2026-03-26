@@ -236,7 +236,7 @@ def generate_config_pdf(username: str, password: str, smtp_host: str,
         elif spf_info["status"] == "needs_update":
             elements.append(Paragraph(
                 "Der SPF-Record fuer <b>{}</b> muss erweitert werden. "
-                "Bitte fuegen Sie <b>include:{}</b> hinzu.".format(
+                "Bitte fuegen Sie <b>include:spf.{}</b> hinzu.".format(
                     spf_info["mail_domain"], spf_info["relay_domain"]),
                 spf_warn_style,
             ))
