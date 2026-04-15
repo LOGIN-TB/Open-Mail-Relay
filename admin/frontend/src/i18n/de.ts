@@ -158,6 +158,7 @@ export default {
     filterReset: 'Zuruecksetzen',
     exportCsv: 'CSV exportieren',
     allStatuses: 'Alle',
+    allUsers: 'Alle Benutzer',
     sent: 'Gesendet',
     deferred: 'Verzoegert',
     bounced: 'Zurueckgewiesen',

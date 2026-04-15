@@ -4,6 +4,15 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.2.0] - 2026-04-15
+
+### Hinzugefuegt
+- **SMTP-Benutzer-Filter im Protokoll** — Neues Dropdown im Protokoll-Bereich zum Filtern nach SMTP-Benutzer (Quelle/Kunde)
+  - Dedizierter Filter neben dem Status-Filter fuer gezielte Analyse aller Mail-Aktionen eines Kunden
+  - Neuer API-Endpoint `GET /api/logs/events/usernames` liefert alle aktiven SMTP-Benutzernamen
+  - Filter wird auch beim CSV-Export beruecksichtigt
+  - Benutzerliste wird automatisch aus den vorhandenen Log-Eintraegen geladen
+
 ## [2.1.0] - 2026-03-26
 
 ### Hinzugefuegt

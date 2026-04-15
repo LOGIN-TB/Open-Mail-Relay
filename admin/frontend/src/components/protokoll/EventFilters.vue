@@ -1,8 +1,13 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useProtokollStore } from '../../stores/protokoll'
 import t from '../../i18n/de'
 
 const store = useProtokollStore()
+
+onMounted(() => {
+  store.fetchUsernames()
+})
 </script>
 
 <template>
@@ -15,6 +20,11 @@ const store = useProtokollStore()
         <option value="bounced">{{ t.protokoll.bounced }}</option>
         <option value="rejected">{{ t.protokoll.rejected }}</option>
         <option value="auth_failed">{{ t.protokoll.authFailed }}</option>
+      </select>
+
+      <select v-model="store.filters.smtpUser" class="filter-input">
+        <option value="">{{ t.protokoll.allUsers }}</option>
+        <option v-for="u in store.usernames" :key="u" :value="u">{{ u }}</option>
       </select>
 
       <input

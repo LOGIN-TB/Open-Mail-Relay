@@ -37,7 +37,7 @@ from app.services.abuse_service import get_abuse_settings
 
 logger = logging.getLogger(__name__)
 
-VERSION = "2.1.0"
+VERSION = "2.2.0"
 
 PORTAL_DEFAULTS = {
     "portal_api_key": "",

@@ -21,7 +21,8 @@ router = APIRouter()
 
 
 def _build_event_query(db: Session, status: str | None, search: str | None,
-                       date_from: datetime | None, date_to: datetime | None):
+                       date_from: datetime | None, date_to: datetime | None,
+                       sasl_username: str | None = None):
     query = db.query(MailEvent)
     if status:
         query = query.filter(MailEvent.status == status)
@@ -37,7 +38,24 @@ def _build_event_query(db: Session, status: str | None, search: str | None,
         query = query.filter(MailEvent.timestamp >= date_from)
     if date_to:
         query = query.filter(MailEvent.timestamp <= date_to)
+    if sasl_username:
+        query = query.filter(MailEvent.sasl_username == sasl_username)
     return query
+
+
+@router.get("/events/usernames", response_model=list[str])
+def get_event_usernames(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    rows = (
+        db.query(MailEvent.sasl_username)
+        .filter(MailEvent.sasl_username.isnot(None), MailEvent.sasl_username != "")
+        .distinct()
+        .order_by(MailEvent.sasl_username)
+        .all()
+    )
+    return [r[0] for r in rows]
 
 
 @router.get("/events", response_model=PaginatedMailEvents)
@@ -46,12 +64,13 @@ def get_events(
     search: str | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    sasl_username: str | None = None,
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    query = _build_event_query(db, status, search, date_from, date_to)
+    query = _build_event_query(db, status, search, date_from, date_to, sasl_username)
     total = query.count()
     pages = max(1, (total + per_page - 1) // per_page)
     items = (
@@ -75,10 +94,11 @@ def export_events(
     search: str | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    sasl_username: str | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    query = _build_event_query(db, status, search, date_from, date_to)
+    query = _build_event_query(db, status, search, date_from, date_to, sasl_username)
     events = query.order_by(MailEvent.timestamp.desc()).limit(10000).all()
 
     output = io.StringIO()

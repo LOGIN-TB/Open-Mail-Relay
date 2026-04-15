@@ -36,7 +36,10 @@ export const useProtokollStore = defineStore('protokoll', () => {
     search: '' as string,
     dateFrom: '' as string,
     dateTo: '' as string,
+    smtpUser: '' as string,
   })
+
+  const usernames = ref<string[]>([])
 
   const retention = ref<RetentionSettings>({ retention_days: 30, stats_retention_days: 365 })
 
@@ -49,6 +52,7 @@ export const useProtokollStore = defineStore('protokoll', () => {
     if (filters.search) params.search = filters.search
     if (filters.dateFrom) params.date_from = filters.dateFrom
     if (filters.dateTo) params.date_to = filters.dateTo
+    if (filters.smtpUser) params.sasl_username = filters.smtpUser
     return params
   }
 
@@ -75,6 +79,7 @@ export const useProtokollStore = defineStore('protokoll', () => {
     filters.search = ''
     filters.dateFrom = ''
     filters.dateTo = ''
+    filters.smtpUser = ''
     page.value = 1
     return fetchEvents()
   }
@@ -90,6 +95,7 @@ export const useProtokollStore = defineStore('protokoll', () => {
     if (filters.search) params.search = filters.search
     if (filters.dateFrom) params.date_from = filters.dateFrom
     if (filters.dateTo) params.date_to = filters.dateTo
+    if (filters.smtpUser) params.sasl_username = filters.smtpUser
 
     const { data } = await api.get('/logs/events/export', {
       params,
@@ -103,6 +109,15 @@ export const useProtokollStore = defineStore('protokoll', () => {
     window.URL.revokeObjectURL(url)
   }
 
+  async function fetchUsernames() {
+    try {
+      const { data } = await api.get('/logs/events/usernames')
+      usernames.value = data
+    } catch {
+      usernames.value = []
+    }
+  }
+
   async function fetchRetention() {
     const { data } = await api.get('/logs/retention')
     retention.value = data
@@ -114,8 +129,8 @@ export const useProtokollStore = defineStore('protokoll', () => {
   }
 
   return {
-    events, total, page, perPage, pages, loading, filters, retention,
+    events, total, page, perPage, pages, loading, filters, retention, usernames,
     fetchEvents, applyFilters, resetFilters, setPage, exportCsv,
-    fetchRetention, updateRetention,
+    fetchUsernames, fetchRetention, updateRetention,
   }
 })
