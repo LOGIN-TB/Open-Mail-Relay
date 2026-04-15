@@ -129,6 +129,8 @@ class StatsCollector:
                 relay=event.relay,
                 delay=event.delay,
                 dsn=event.dsn,
+                dsn_code=event.dsn_code,
+                remote_response=event.remote_response,
                 size=event.size,
                 message=event.message,
                 client_ip=event.client_ip,
