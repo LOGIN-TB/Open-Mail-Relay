@@ -18,12 +18,11 @@ Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   - Felder sind nullable und werden bei bestehenden Eintraegen leer gelassen
 - Neue Datenbank-Migration: 014 (dsn_code, remote_response auf mail_events)
 - **Log-Parser extrahiert Bounce-Details** — `dsn_code` und `remote_response` werden automatisch aus der Postfix-Statuszeile erkannt (Muster `said: NNN ...` und `refused to talk to me: NNN ...`) und bei neuen Mail-Events befuellt
-- **Update-Skript** (`scripts/update.sh`) — holt den aktuellen Stand aus dem Repo, baut die Container neu und startet den Dienst; Datenbank-Migrationen laufen automatisch. Optional kann ein Branch uebergeben werden
 
 ### Geaendert
 - `MailEventOut`-Schema um `dsn_code` und `remote_response` erweitert
 - CSV-Export im Kundenportal enthaelt neue DSN-Spalten
-- README um Abschnitt "Update" ergaenzt
+- README um kurzen Abschnitt "Update" ergaenzt (`git pull` + `docker compose up -d --build`)
 
 ## [2.2.0] - 2026-04-15
 

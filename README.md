@@ -83,18 +83,13 @@ Standard-Login: `admin` / (Wert aus `ADMIN_DEFAULT_PASSWORD`)
 
 ## Update
 
-Fuer eine bestehende Installation:
-
 ```bash
 cd /opt/open-mail-relay   # oder das Verzeichnis, in das geklont wurde
-sudo ./scripts/update.sh
+git pull
+docker compose up -d --build
 ```
 
-Das Skript stasht lokale Aenderungen, zieht den aktuellen Stand des `main`-Branches, baut die Container neu und startet den Dienst. Datenbank-Migrationen laufen beim Start des `admin-panel` Containers automatisch. Optional kann ein Branch uebergeben werden:
-
-```bash
-sudo ./scripts/update.sh feat/portal-api-extensions
-```
+Datenbank-Migrationen laufen beim Start des `admin-panel`-Containers automatisch — kein weiterer Schritt noetig.
 
 ## Umgebungsvariablen (.env)
 
