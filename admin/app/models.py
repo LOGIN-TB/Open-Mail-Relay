@@ -67,6 +67,8 @@ class MailEvent(Base):
     message = Column(Text)
     client_ip = Column(String)
     sasl_username = Column(String)
+    dsn_code = Column(String, nullable=True)
+    remote_response = Column(Text, nullable=True)
 
 
 class StatsHourly(Base):

@@ -134,6 +134,8 @@ class MailEventOut(BaseModel):
     relay: str | None = None
     delay: float | None = None
     dsn: str | None = None
+    dsn_code: str | None = None
+    remote_response: str | None = None
     size: int | None = None
     message: str | None = None
     client_ip: str | None = None
