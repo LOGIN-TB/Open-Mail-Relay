@@ -5,13 +5,15 @@ The only write endpoint is password reset.
 Settings (API key, allowed IPs) are managed via the admin UI and stored in SystemSetting.
 """
 
+import csv
+import io
 import json
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -37,7 +39,7 @@ from app.services.abuse_service import get_abuse_settings
 
 logger = logging.getLogger(__name__)
 
-VERSION = "2.2.0"
+VERSION = "2.3.0"
 
 PORTAL_DEFAULTS = {
     "portal_api_key": "",
@@ -425,6 +427,235 @@ def rbl_status(db: Session = Depends(get_db)):
         "status": "clean" if status.get("all_clean") else "listed",
         "last_checked": settings.get("rbl_last_check_time", ""),
         "listings": listings,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 8. Customer Portal endpoints (identified by SMTP username)
+#
+# Used by the Spamgo customer portal (my.spamgo.de) to drive the per-customer
+# dashboard, protocol view and bounce listing. The portal holds a registry of
+# relay servers and routes each request to the relay that owns the caller's
+# SMTP account; these endpoints therefore always operate on a single username.
+# ---------------------------------------------------------------------------
+
+BOUNCE_STATUSES = ("bounced", "deferred", "rejected")
+
+
+def _resolve_smtp_user(db: Session, username: str) -> SmtpUser:
+    user = db.query(SmtpUser).filter(SmtpUser.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="SMTP user not found")
+    return user
+
+
+def _parse_iso(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid ISO timestamp: {value}")
+
+
+def _apply_log_filters(query, *, status: str | None, search: str | None,
+                       date_from: datetime | None, date_to: datetime | None):
+    if status:
+        query = query.filter(MailEvent.status == status)
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            (MailEvent.sender.ilike(like))
+            | (MailEvent.recipient.ilike(like))
+            | (MailEvent.client_ip.ilike(like))
+            | (MailEvent.queue_id.ilike(like))
+        )
+    if date_from:
+        query = query.filter(MailEvent.timestamp >= date_from)
+    if date_to:
+        query = query.filter(MailEvent.timestamp <= date_to)
+    return query
+
+
+def _event_to_dict(e: MailEvent) -> dict:
+    return {
+        "id": e.id,
+        "timestamp": (e.timestamp.replace(tzinfo=timezone.utc)
+                      if e.timestamp and e.timestamp.tzinfo is None
+                      else e.timestamp).isoformat() if e.timestamp else None,
+        "status": e.status,
+        "queue_id": e.queue_id,
+        "sender": e.sender,
+        "recipient": e.recipient,
+        "relay": e.relay,
+        "delay": e.delay,
+        "dsn": e.dsn,
+        "dsn_code": e.dsn_code,
+        "remote_response": e.remote_response,
+        "size": e.size,
+        "message": e.message,
+        "client_ip": e.client_ip,
+    }
+
+
+@router.get("/smtp-users")
+def portal_list_smtp_users(
+    domain: str = Query(..., description="mail_domain to search for (case-insensitive)"),
+    db: Session = Depends(get_db),
+):
+    """Onboarding lookup: list SMTP users of this relay whose mail_domain matches.
+
+    Used by the portal's OAuth matching flow to determine whether a new
+    customer owns an SMTP account on this relay.
+    """
+    users = (
+        db.query(SmtpUser)
+        .filter(func.lower(SmtpUser.mail_domain) == domain.lower())
+        .order_by(SmtpUser.id)
+        .all()
+    )
+    return {
+        "server": _get_hostname(),
+        "matches": [
+            {
+                "smtp_user_id": u.id,
+                "username": u.username,
+                "mail_domain": u.mail_domain,
+                "company": u.company,
+                "service": u.service,
+                "contact_email": u.contact_email,
+                "is_active": u.is_active,
+            }
+            for u in users
+        ],
+    }
+
+
+@router.get("/smtp-users/{username}/stats")
+def portal_user_stats(username: str, db: Session = Depends(get_db)):
+    """Return aggregated delivery statistics for a single SMTP user."""
+    user = _resolve_smtp_user(db, username)
+    # Reuse the existing id-based implementation to keep behaviour identical.
+    return get_stats(user.id, db=db)
+
+
+@router.get("/smtp-users/{username}/logs")
+def portal_user_logs(
+    username: str,
+    status: str | None = Query(None, description="Filter by status (sent/deferred/bounced/rejected)"),
+    search: str | None = Query(None, description="Substring match on sender/recipient/client_ip/queue_id"),
+    date_from: str | None = Query(None, description="ISO timestamp, inclusive"),
+    date_to: str | None = Query(None, description="ISO timestamp, inclusive"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    """Paginated mail events for a single SMTP user, same filters as the admin protocol view."""
+    user = _resolve_smtp_user(db, username)
+    df = _parse_iso(date_from)
+    dt = _parse_iso(date_to)
+
+    query = db.query(MailEvent).filter(MailEvent.sasl_username == user.username)
+    query = _apply_log_filters(query, status=status, search=search, date_from=df, date_to=dt)
+
+    total = query.count()
+    pages = max(1, (total + per_page - 1) // per_page)
+    items = (
+        query.order_by(MailEvent.timestamp.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+    return {
+        "items": [_event_to_dict(e) for e in items],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pages,
+    }
+
+
+@router.get("/smtp-users/{username}/logs.csv")
+def portal_user_logs_csv(
+    username: str,
+    status: str | None = None,
+    search: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """CSV export of the same filtered log view. Capped at 10000 rows."""
+    user = _resolve_smtp_user(db, username)
+    df = _parse_iso(date_from)
+    dt = _parse_iso(date_to)
+
+    query = db.query(MailEvent).filter(MailEvent.sasl_username == user.username)
+    query = _apply_log_filters(query, status=status, search=search, date_from=df, date_to=dt)
+    events = query.order_by(MailEvent.timestamp.desc()).limit(10000).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Zeitpunkt", "Status", "Queue-ID", "Absender", "Empfaenger",
+        "Relay", "Delay", "DSN", "DSN-Code", "Remote-Response",
+        "Groesse", "Nachricht", "Client-IP",
+    ])
+    for e in events:
+        writer.writerow([
+            e.timestamp.isoformat() + "Z" if e.timestamp else "",
+            e.status, e.queue_id or "", e.sender or "", e.recipient or "",
+            e.relay or "", e.delay or "", e.dsn or "",
+            e.dsn_code or "", e.remote_response or "",
+            e.size or "", e.message or "", e.client_ip or "",
+        ])
+    output.seek(0)
+
+    filename = f"portal-logs-{user.username}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/smtp-users/{username}/bounces")
+def portal_user_bounces(
+    username: str,
+    date_from: str | None = Query(None, description="ISO timestamp, inclusive"),
+    date_to: str | None = Query(None, description="ISO timestamp, inclusive"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    """Paginated bounce/deferred/rejected events for a single SMTP user."""
+    user = _resolve_smtp_user(db, username)
+    df = _parse_iso(date_from)
+    dt = _parse_iso(date_to)
+
+    query = (
+        db.query(MailEvent)
+        .filter(MailEvent.sasl_username == user.username)
+        .filter(MailEvent.status.in_(BOUNCE_STATUSES))
+    )
+    if df:
+        query = query.filter(MailEvent.timestamp >= df)
+    if dt:
+        query = query.filter(MailEvent.timestamp <= dt)
+
+    total = query.count()
+    pages = max(1, (total + per_page - 1) // per_page)
+    items = (
+        query.order_by(MailEvent.timestamp.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+    return {
+        "items": [_event_to_dict(e) for e in items],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pages,
     }
 
 

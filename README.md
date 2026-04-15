@@ -81,6 +81,16 @@ Standard-Login: `admin` / (Wert aus `ADMIN_DEFAULT_PASSWORD`)
 
 > Detaillierte Anleitung: [docs/SETUP.md](docs/SETUP.md)
 
+## Update
+
+```bash
+cd /opt/open-mail-relay   # oder das Verzeichnis, in das geklont wurde
+git pull
+docker compose up -d --build
+```
+
+Datenbank-Migrationen laufen beim Start des `admin-panel`-Containers automatisch — kein weiterer Schritt noetig.
+
 ## Umgebungsvariablen (.env)
 
 | Variable | Beschreibung | Beispiel |

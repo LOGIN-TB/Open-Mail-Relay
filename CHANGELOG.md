@@ -4,6 +4,26 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.3.0] - 2026-04-15
+
+### Hinzugefuegt
+- **Portal-API Erweiterung fuer Kundendashboard** — Neue Endpunkte unter `/api/portal/smtp-users` fuer das Spamgo-Kundenportal (my.spamgo.de)
+  - `GET /api/portal/smtp-users?domain=...` — Suche nach SMTP-Benutzern anhand der `mail_domain` (Onboarding-Matching nach OAuth-Login)
+  - `GET /api/portal/smtp-users/{username}/stats` — Zustellstatistiken pro SMTP-Benutzername (analog zum bestehenden ID-basierten Endpunkt)
+  - `GET /api/portal/smtp-users/{username}/logs` — Paginiertes Protokoll mit Filtern (Status, Datumsbereich, Freitextsuche)
+  - `GET /api/portal/smtp-users/{username}/logs.csv` — CSV-Export des gefilterten Protokolls (max. 10.000 Zeilen)
+  - `GET /api/portal/smtp-users/{username}/bounces` — Paginierte Liste von Bounces/Deferred/Rejected mit DSN-Details
+- **Erweiterte Bounce-Informationen in MailEvent** — Neue Spalten `dsn_code` und `remote_response` fuer strukturierte Bounce-Analyse
+  - Ermoeglicht dem Kundenportal, detaillierte DSN-Codes und Remote-Server-Antworten anzuzeigen
+  - Felder sind nullable und werden bei bestehenden Eintraegen leer gelassen
+- Neue Datenbank-Migration: 014 (dsn_code, remote_response auf mail_events)
+- **Log-Parser extrahiert Bounce-Details** — `dsn_code` und `remote_response` werden automatisch aus der Postfix-Statuszeile erkannt (Muster `said: NNN ...` und `refused to talk to me: NNN ...`) und bei neuen Mail-Events befuellt
+
+### Geaendert
+- `MailEventOut`-Schema um `dsn_code` und `remote_response` erweitert
+- CSV-Export im Kundenportal enthaelt neue DSN-Spalten
+- README um kurzen Abschnitt "Update" ergaenzt (`git pull` + `docker compose up -d --build`)
+
 ## [2.2.0] - 2026-04-15
 
 ### Hinzugefuegt

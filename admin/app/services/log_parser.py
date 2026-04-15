@@ -13,6 +13,8 @@ class ParsedMailEvent:
     relay: str | None = None
     delay: float | None = None
     dsn: str | None = None
+    dsn_code: str | None = None
+    remote_response: str | None = None
     size: int | None = None
     message: str | None = None
     client_ip: str | None = None
@@ -65,6 +67,28 @@ DOCKER_TS_RE = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})")
 # Postfix syslog-style timestamp: "Mon DD HH:MM:SS"
 SYSLOG_TS_RE = re.compile(r"^(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})")
 
+# Remote-response patterns inside the parenthesised message of a status line.
+# Typical forms:
+#   "host mx.example.com[1.2.3.4] said: 550 5.1.1 <u@x>: ..."
+#   "host mx.example.com[1.2.3.4] refused to talk to me: 421 4.7.0 ..."
+#   "delivery temporarily suspended: connect to mx.example.com[1.2.3.4]: ..."
+REMOTE_SAID_RE = re.compile(r"said:\s*(?P<code>\d{3})\b(?:\s+(?P<rest>.*))?")
+REMOTE_REFUSED_RE = re.compile(r"(?:refused to talk to me|greeted me with):\s*(?P<code>\d{3})\b(?:\s+(?P<rest>.*))?")
+
+
+def extract_remote_details(message: str | None) -> tuple[str | None, str | None]:
+    """Pull the SMTP 3-digit code and the remote's full reply out of a status message."""
+    if not message:
+        return None, None
+    for pattern in (REMOTE_SAID_RE, REMOTE_REFUSED_RE):
+        m = pattern.search(message)
+        if m:
+            code = m.group("code")
+            rest = (m.group("rest") or "").strip(" )")
+            response = f"{code} {rest}".strip() if rest else code
+            return code, response
+    return None, None
+
 
 def parse_timestamp(line: str) -> datetime | None:
     # Try Docker timestamp first
@@ -108,6 +132,8 @@ def parse_log_line(line: str) -> ParsedMailEvent | None:
         status = m.group("status")
         if status not in ("sent", "deferred", "bounced"):
             return None
+        message = m.group("message")
+        dsn_code, remote_response = extract_remote_details(message)
         return ParsedMailEvent(
             timestamp=ts,
             queue_id=m.group("queue_id"),
@@ -116,7 +142,9 @@ def parse_log_line(line: str) -> ParsedMailEvent | None:
             relay=m.group("relay"),
             delay=float(m.group("delay")) if m.group("delay") else None,
             dsn=m.group("dsn"),
-            message=m.group("message"),
+            dsn_code=dsn_code,
+            remote_response=remote_response,
+            message=message,
         )
 
     # Check for SASL authentication failure
