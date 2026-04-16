@@ -108,15 +108,29 @@ chmod 644 "${DKIM_DIR}/${DKIM_SELECTOR}.txt"
 mkdir -p /etc/opendkim /var/run/opendkim
 chown opendkim:opendkim /var/run/opendkim
 
+# KeyTable/SigningTable fuer Wildcard-Signierung:
+# - Relay besitzt einen einzigen privaten Schluessel.
+# - Kunden delegieren DKIM via CNAME: <selector>._domainkey.<kundendomain>
+#   -> <selector>._domainkey.<relaydomain>.
+# - Der %-Platzhalter in KeyTable wird zur Laufzeit durch die From-Domain
+#   ersetzt; damit signiert OpenDKIM jede Domain mit passender d=-Angabe.
+cat > /etc/opendkim/KeyTable <<KTEOF
+default %:${DKIM_SELECTOR}:${DKIM_DIR}/${DKIM_SELECTOR}.private
+KTEOF
+cat > /etc/opendkim/SigningTable <<STEOF
+*@* default
+STEOF
+chown -R opendkim:opendkim /etc/opendkim
+chmod 644 /etc/opendkim/KeyTable /etc/opendkim/SigningTable
+
 cat > /etc/opendkim.conf <<DKIMEOF
 Syslog                  yes
 SyslogSuccess           yes
 LogWhy                  yes
 Mode                    s
 Canonicalization        relaxed/simple
-Domain                  ${MAIL_DOMAIN}
-Selector                ${DKIM_SELECTOR}
-KeyFile                 ${DKIM_DIR}/${DKIM_SELECTOR}.private
+KeyTable                refile:/etc/opendkim/KeyTable
+SigningTable            refile:/etc/opendkim/SigningTable
 Socket                  inet:8891@localhost
 PidFile                 /var/run/opendkim/opendkim.pid
 UMask                   002

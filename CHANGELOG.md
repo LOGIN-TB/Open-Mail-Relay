@@ -4,6 +4,11 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.4.3] - 2026-04-16
+
+### Behoben
+- **DKIM-Signierung fuer Kundendomaenen** — OpenDKIM war hart auf eine einzige Domain (`mydomain` aus `main.cf`, z. B. `spamgo.de`) verdrahtet; Mails mit From-Domain wie `hsgm.com` wurden still uebersprungen (`dkim=none (message not signed)`). Die OpenDKIM-Konfiguration in `scripts/entrypoint.sh` nutzt jetzt `KeyTable`/`SigningTable` mit dem `%`-Platzhalter: derselbe Relay-Schluessel (`<selector>.private`) signiert **jede** From-Domain, das `d=`-Feld wird zur Laufzeit aus der From-Adresse abgeleitet. Passt zum bereits bestehenden CNAME-Delegationsmodell (Kunde setzt `<selector>._domainkey.<kundendomain>` CNAME auf `<selector>._domainkey.<relaydomain>`, vgl. Konfigurations-PDF v2.4.0).
+
 ## [2.4.2] - 2026-04-16
 
 ### Behoben
