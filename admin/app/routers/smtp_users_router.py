@@ -21,7 +21,7 @@ from app.services.crypto_service import generate_smtp_password, encrypt_password
 from app.services.sasl_service import sync_dovecot_users
 from app.services.pdf_service import generate_config_pdf
 from app.services.postfix_service import read_main_cf
-from app.services.spf_check_service import check_customer_spf
+from app.services.spf_check_service import check_customer_spf, check_customer_dkim_cname
 from app.services.abuse_service import get_abuse_settings
 from app.services.billing_service import send_single_usage_report
 
@@ -245,8 +245,9 @@ def _build_config_pdf(user: SmtpUser, db: Session) -> tuple[bytes, dict | None]:
 
     smtp_host = _get_smtp_host()
 
-    # SPF check for customer domain
+    # SPF + DKIM checks for customer domain
     spf_info = None
+    dkim_info = None
     if user.mail_domain:
         parts = smtp_host.split(".")
         relay_domain = ".".join(parts[1:]) if len(parts) > 2 else smtp_host
@@ -254,6 +255,10 @@ def _build_config_pdf(user: SmtpUser, db: Session) -> tuple[bytes, dict | None]:
             spf_info = check_customer_spf(user.mail_domain, relay_domain)
         except Exception as e:
             logger.warning(f"SPF check failed for {user.mail_domain}: {e}")
+        try:
+            dkim_info = check_customer_dkim_cname(user.mail_domain, smtp_host)
+        except Exception as e:
+            logger.warning(f"DKIM check failed for {user.mail_domain}: {e}")
 
     # Operator info from abuse/config settings
     operator_info = None
@@ -283,7 +288,7 @@ def _build_config_pdf(user: SmtpUser, db: Session) -> tuple[bytes, dict | None]:
         company=user.company, service=user.service,
         mail_domain=user.mail_domain, contact_email=user.contact_email,
         package_name=pkg_name,
-        spf_info=spf_info, operator_info=operator_info,
+        spf_info=spf_info, dkim_info=dkim_info, operator_info=operator_info,
     )
 
     return pdf_bytes, operator_info, abuse

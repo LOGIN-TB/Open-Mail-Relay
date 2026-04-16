@@ -4,6 +4,11 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.4.1] - 2026-04-16
+
+### Behoben
+- **DKIM-Sektion fehlte im Admin-UI Konfigurations-PDF** — Der in v2.4.0 eingefuehrte DKIM-CNAME-Check wurde nur im Portal-Router (`/api/portal/config-pdf/{id}`) aufgerufen, nicht aber im Admin-UI-Endpunkt (`/api/smtp-users/{id}/config-pdf`). PDFs, die aus der Admin-Oberflaeche heruntergeladen wurden, enthielten daher keine DKIM-Informationen. `_build_config_pdf()` in `smtp_users_router.py` ruft jetzt ebenfalls `check_customer_dkim_cname()` auf und uebergibt `dkim_info` an den PDF-Generator.
+
 ## [2.4.0] - 2026-04-16
 
 ### Hinzugefuegt
