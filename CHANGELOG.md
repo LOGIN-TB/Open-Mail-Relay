@@ -4,6 +4,11 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.4.2] - 2026-04-16
+
+### Behoben
+- **Protokoll-Benutzerfilter zeigt nur registrierte SMTP-Benutzer** — Das Dropdown „Benutzer" in der Protokoll-Ansicht listete bisher alle jemals in Postfix-Logs aufgetauchten `sasl_username`-Werte (inkl. fehlgeschlagener Auth-Versuche mit willkuerlichen Benutzernamen). Der Endpunkt `GET /api/logs/events/usernames` liefert jetzt ausschliesslich Benutzernamen aus der Tabelle `smtp_users` — konsistent mit der Liste in der SMTP-Benutzer-Ansicht.
+
 ## [2.4.1] - 2026-04-16
 
 ### Behoben

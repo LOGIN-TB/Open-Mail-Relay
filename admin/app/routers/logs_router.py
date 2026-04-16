@@ -12,7 +12,7 @@ from app.auth import decode_access_token
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models import MailEvent, SystemSetting, User
+from app.models import MailEvent, SmtpUser, SystemSetting, User
 from app.schemas import PaginatedMailEvents, MailEventOut, RetentionSettings, RetentionUpdate
 
 logger = logging.getLogger(__name__)
@@ -49,10 +49,8 @@ def get_event_usernames(
     user: User = Depends(get_current_user),
 ):
     rows = (
-        db.query(MailEvent.sasl_username)
-        .filter(MailEvent.sasl_username.isnot(None), MailEvent.sasl_username != "")
-        .distinct()
-        .order_by(MailEvent.sasl_username)
+        db.query(SmtpUser.username)
+        .order_by(SmtpUser.username)
         .all()
     )
     return [r[0] for r in rows]
