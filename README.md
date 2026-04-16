@@ -147,7 +147,7 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - Optionale Felder **Firma** und **Dienst** zur Zuordnung (inline editierbar)
 - Automatische Passwort-Generierung (Format: xxxx-xxxxxx-xxxx)
 - Passwort jederzeit regenerierbar
-- **PDF-Konfigurationsblatt** mit Zugangsdaten, Zuordnung (Firma/Dienst) und Einrichtungsanleitung
+- **PDF-Konfigurationsblatt** mit Zugangsdaten, Zuordnung (Firma/Dienst) und Einrichtungsanleitung. Auf Seite 2 zusaetzlich Live-Pruefung der Kunden-DNS-Eintraege: **SPF-Record** (TXT) und **DKIM-CNAME** (`<servername>._domainkey.<kundendomain>` → `<servername>._domainkey.<relay-domain>`) jeweils mit Status (gruen/gelb), aktuellem Eintrag und kopierbarem Empfehlungstext
 - **Letzte Nutzung** - Zeigt an, wann ein SMTP-Benutzer zuletzt eine Mail versendet hat
 - Fernet-verschluesselte Passwoerter in der Datenbank
 - Automatische Synchronisierung mit Dovecot (SASL-Backend)

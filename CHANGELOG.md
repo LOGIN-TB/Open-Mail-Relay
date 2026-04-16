@@ -4,6 +4,12 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.4.0] - 2026-04-16
+
+### Hinzugefuegt
+- **DKIM-CNAME-Pruefung im Kunden-Konfigurations-PDF** — Beim Generieren des SMTP-Konfigurations-PDFs (`/portal/config-pdf/{smtp_user_id}`) wird zusaetzlich zum bestehenden SPF-Check eine DNS-Abfrage gegen `<servername>._domainkey.<kundendomain>` durchgefuehrt und als eigene Sektion auf Seite 2 dargestellt. Drei Status (`ok` / `needs_update` / `missing`) mit identischer Farbgebung wie die SPF-Sektion: gruener Hinweis bei korrektem CNAME, gelber Hinweis mit aktuellem und empfohlenem Eintrag bei falschem Ziel oder fehlender CNAME. Empfohlener Eintrag hat die Form `<selector>._domainkey.<kundendomain>  CNAME  <selector>._domainkey.<relay-domain>`, wobei der Selector dem ersten Hostname-Label des Relays entspricht (z. B. `relay2`). Sektion wird wie SPF uebersprungen, wenn beim SMTP-User keine `mail_domain` hinterlegt ist.
+- Neue Service-Funktion `check_customer_dkim_cname()` in `spf_check_service.py` mit `_resolve_cname()`-Helper (dnspython, Lifetime 5 s, NXDOMAIN/NoAnswer/NoNameservers tolerant).
+
 ## [2.3.2] - 2026-04-16
 
 ### Entfernt

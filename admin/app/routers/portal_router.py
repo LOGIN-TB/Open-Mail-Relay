@@ -34,12 +34,12 @@ from app.services.rbl_service import (
     get_rbl_settings,
 )
 from app.services.sasl_service import sync_dovecot_users
-from app.services.spf_check_service import check_customer_spf
+from app.services.spf_check_service import check_customer_dkim_cname, check_customer_spf
 from app.services.abuse_service import get_abuse_settings
 
 logger = logging.getLogger(__name__)
 
-VERSION = "2.3.2"
+VERSION = "2.4.0"
 
 PORTAL_DEFAULTS = {
     "portal_api_key": "",
@@ -354,8 +354,9 @@ def get_config_pdf(smtp_user_id: int, db: Session = Depends(get_db)):
 
     smtp_host = _get_hostname()
 
-    # SPF check for customer domain
+    # SPF + DKIM checks for customer domain
     spf_info = None
+    dkim_info = None
     if user.mail_domain:
         parts = smtp_host.split(".")
         relay_domain = ".".join(parts[1:]) if len(parts) > 2 else smtp_host
@@ -363,6 +364,10 @@ def get_config_pdf(smtp_user_id: int, db: Session = Depends(get_db)):
             spf_info = check_customer_spf(user.mail_domain, relay_domain)
         except Exception as e:
             logger.warning("SPF check failed for %s: %s", user.mail_domain, e)
+        try:
+            dkim_info = check_customer_dkim_cname(user.mail_domain, smtp_host)
+        except Exception as e:
+            logger.warning("DKIM check failed for %s: %s", user.mail_domain, e)
 
     # Operator info
     operator_info = None
@@ -387,7 +392,7 @@ def get_config_pdf(smtp_user_id: int, db: Session = Depends(get_db)):
         company=user.company, service=user.service,
         mail_domain=user.mail_domain, contact_email=user.contact_email,
         package_name=pkg_name,
-        spf_info=spf_info, operator_info=operator_info,
+        spf_info=spf_info, dkim_info=dkim_info, operator_info=operator_info,
     )
 
     return Response(

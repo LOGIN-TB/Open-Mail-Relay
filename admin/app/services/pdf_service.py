@@ -17,6 +17,7 @@ def generate_config_pdf(username: str, password: str, smtp_host: str,
                         mail_domain: str | None = None, contact_email: str | None = None,
                         package_name: str | None = None,
                         spf_info: dict | None = None,
+                        dkim_info: dict | None = None,
                         operator_info: dict | None = None) -> bytes:
     """Generate a PDF configuration sheet with SMTP credentials."""
     buffer = io.BytesIO()
@@ -177,17 +178,9 @@ def generate_config_pdf(username: str, password: str, smtp_host: str,
         elements.append(Paragraph(step, body_style))
         elements.append(Spacer(1, 1 * mm))
 
-    # SPF record section (only if spf_info provided) — on page 2
-    if spf_info:
+    # DNS record sections (SPF + DKIM) — on page 2
+    if spf_info or dkim_info:
         elements.append(PageBreak())
-        elements.append(Paragraph("SPF-Record Konfiguration", title_style))
-        elements.append(Paragraph(
-            "Damit E-Mails, die ueber den Relay-Server versendet werden, nicht als Spam "
-            "eingestuft werden, muss der SPF-Record (DNS TXT-Eintrag) der Absender-Domain "
-            "<b>{}</b> den Relay-Server autorisieren.".format(spf_info["mail_domain"]),
-            body_style,
-        ))
-        elements.append(Spacer(1, 6 * mm))
 
         spf_ok_style = ParagraphStyle(
             "SpfOk",
@@ -221,6 +214,16 @@ def generate_config_pdf(username: str, password: str, smtp_host: str,
             borderPadding=6,
             borderRadius=3,
         )
+
+    if spf_info:
+        elements.append(Paragraph("SPF-Record Konfiguration", title_style))
+        elements.append(Paragraph(
+            "Damit E-Mails, die ueber den Relay-Server versendet werden, nicht als Spam "
+            "eingestuft werden, muss der SPF-Record (DNS TXT-Eintrag) der Absender-Domain "
+            "<b>{}</b> den Relay-Server autorisieren.".format(spf_info["mail_domain"]),
+            body_style,
+        ))
+        elements.append(Spacer(1, 6 * mm))
 
         if spf_info["status"] == "ok":
             elements.append(Paragraph(
@@ -259,6 +262,72 @@ def generate_config_pdf(username: str, password: str, smtp_host: str,
             elements.append(Paragraph("Empfohlener SPF-Record:", body_style))
             elements.append(Spacer(1, 3 * mm))
             elements.append(Paragraph(spf_info["suggested_record"], spf_mono_style))
+
+    if dkim_info:
+        if spf_info:
+            elements.append(Spacer(1, 8 * mm))
+        elements.append(Paragraph("DKIM-Record Konfiguration", title_style))
+        elements.append(Paragraph(
+            "Damit der Relay-Server gueltige DKIM-Signaturen fuer die Absender-Domain "
+            "<b>{}</b> erzeugen kann, muss ein DNS CNAME-Eintrag auf den DKIM-Schluessel "
+            "des Relay-Servers zeigen.".format(dkim_info["mail_domain"]),
+            body_style,
+        ))
+        elements.append(Spacer(1, 6 * mm))
+
+        if dkim_info["status"] == "ok":
+            current = str(dkim_info["current_record"])
+            is_direct_txt = "v=DKIM1" in current or "p=" in current
+            if is_direct_txt:
+                elements.append(Paragraph(
+                    "Die Absender-Domain entspricht der Relay-Domain — der DKIM-Schluessel "
+                    "ist bereits direkt als DNS TXT-Eintrag unter <b>{}</b> hinterlegt. "
+                    "Es ist keine weitere Konfiguration erforderlich.".format(
+                        dkim_info["lookup_name"]),
+                    spf_ok_style,
+                ))
+                elements.append(Spacer(1, 6 * mm))
+                elements.append(Paragraph("Aktueller TXT-Eintrag:", body_style))
+                elements.append(Spacer(1, 3 * mm))
+                elements.append(Paragraph(current, spf_mono_style))
+            else:
+                elements.append(Paragraph(
+                    "Der DKIM CNAME fuer <b>{}</b> ist korrekt konfiguriert und zeigt auf "
+                    "<b>{}</b>.".format(dkim_info["lookup_name"], dkim_info["expected_target"]),
+                    spf_ok_style,
+                ))
+                elements.append(Spacer(1, 6 * mm))
+                elements.append(Paragraph("Aktueller Eintrag:", body_style))
+                elements.append(Spacer(1, 3 * mm))
+                elements.append(Paragraph(
+                    "{} CNAME {}".format(dkim_info["lookup_name"], current),
+                    spf_mono_style,
+                ))
+        elif dkim_info["status"] == "needs_update":
+            elements.append(Paragraph(
+                "Fuer <b>{}</b> existiert bereits ein DNS-Eintrag, dieser zeigt aber nicht "
+                "auf den Relay-Schluessel <b>{}</b>. Bitte den Eintrag wie unten angegeben "
+                "korrigieren.".format(dkim_info["lookup_name"], dkim_info["expected_target"]),
+                spf_warn_style,
+            ))
+            elements.append(Spacer(1, 6 * mm))
+            elements.append(Paragraph("Aktueller Eintrag:", body_style))
+            elements.append(Spacer(1, 3 * mm))
+            elements.append(Paragraph(str(dkim_info["current_record"]), spf_mono_style))
+            elements.append(Spacer(1, 6 * mm))
+            elements.append(Paragraph("Empfohlener Eintrag:", body_style))
+            elements.append(Spacer(1, 3 * mm))
+            elements.append(Paragraph(dkim_info["suggested_record"], spf_mono_style))
+        elif dkim_info["status"] == "missing":
+            elements.append(Paragraph(
+                "Fuer <b>{}</b> wurde kein DKIM-Eintrag gefunden. Bitte legen Sie folgenden "
+                "DNS CNAME-Eintrag an:".format(dkim_info["lookup_name"]),
+                spf_warn_style,
+            ))
+            elements.append(Spacer(1, 6 * mm))
+            elements.append(Paragraph("Empfohlener Eintrag:", body_style))
+            elements.append(Spacer(1, 3 * mm))
+            elements.append(Paragraph(dkim_info["suggested_record"], spf_mono_style))
 
     # Security notice
     elements.append(Paragraph("Sicherheitshinweis", heading_style))
