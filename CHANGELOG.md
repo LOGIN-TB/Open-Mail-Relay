@@ -4,6 +4,11 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.3.1] - 2026-04-16
+
+### Behoben
+- **DKIM-Signierung fuer alle autorisierten Absender** — Ausgehende E-Mails von externen mynetworks-IPs und SASL-authentifizierten Benutzern (Port 587) wurden nicht DKIM-signiert, da OpenDKIM's `InternalHosts` nur private Netzwerke enthielt. Korrektur: `InternalHosts` auf `0.0.0.0/0` gesetzt, da Postfix bereits ueber `smtpd_relay_restrictions` sicherstellt, dass nur autorisierte Nachrichten den Milter erreichen.
+
 ## [2.3.0] - 2026-04-15
 
 ### Hinzugefuegt

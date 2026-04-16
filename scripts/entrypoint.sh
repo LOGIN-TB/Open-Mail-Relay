@@ -122,7 +122,7 @@ PidFile                 /var/run/opendkim/opendkim.pid
 UMask                   002
 UserID                  opendkim:opendkim
 OversignHeaders         From
-InternalHosts           127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+InternalHosts           0.0.0.0/0
 DKIMEOF
 
 echo "OpenDKIM configuration written"
