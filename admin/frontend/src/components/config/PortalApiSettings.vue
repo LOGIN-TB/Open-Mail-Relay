@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import api from '../../api/client'
 import t from '../../i18n/de'
@@ -24,15 +24,6 @@ onMounted(async () => {
   } catch {
     // ignore
   }
-})
-
-const configBlock = computed(() => {
-  if (!settings.value) return ''
-  return [
-    `RELAY_API_URL=${settings.value.api_url}`,
-    `RELAY_API_KEY=${settings.value.api_key || '(kein Schluessel generiert)'}`,
-    `RELAY_SERVER=${settings.value.server_hostname}`,
-  ].join('\n')
 })
 
 async function save() {
@@ -64,21 +55,6 @@ async function generateKey() {
   }
 }
 
-async function copyConfig() {
-  try {
-    await navigator.clipboard.writeText(configBlock.value)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.config.portalConfigCopied, life: 2000 })
-  } catch {
-    // Fallback for non-HTTPS contexts
-    const textarea = document.createElement('textarea')
-    textarea.value = configBlock.value
-    document.body.appendChild(textarea)
-    textarea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textarea)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.config.portalConfigCopied, life: 2000 })
-  }
-}
 </script>
 
 <template>
@@ -120,17 +96,6 @@ async function copyConfig() {
       <button class="btn btn-primary" :disabled="saving" @click="save">
         <i class="pi pi-save"></i> {{ saving ? t.common.loading : t.config.save }}
       </button>
-    </div>
-
-    <!-- Copyable config block -->
-    <div class="config-block" v-if="settings.api_key">
-      <label>{{ t.config.portalConfigHint }}</label>
-      <div class="config-copy-row">
-        <pre class="config-pre">{{ configBlock }}</pre>
-        <button class="btn btn-secondary btn-copy" @click="copyConfig">
-          <i class="pi pi-copy"></i> {{ t.config.portalCopyConfig }}
-        </button>
-      </div>
     </div>
   </div>
 </template>
@@ -272,41 +237,4 @@ async function copyConfig() {
   background: #e2e8f0;
 }
 
-.config-block {
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.config-block label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #475569;
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.config-copy-row {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
-}
-
-.config-pre {
-  flex: 1;
-  background: #1e293b;
-  color: #e2e8f0;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', monospace;
-  font-size: 0.8rem;
-  line-height: 1.6;
-  margin: 0;
-  white-space: pre;
-  overflow-x: auto;
-}
-
-.btn-copy {
-  margin-top: 0.25rem;
-}
 </style>

@@ -4,6 +4,11 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.3.2] - 2026-04-16
+
+### Entfernt
+- **Portal-Konfigurationsblock in der Admin-UI** — Der Hinweisblock "Diesen Block in die Portal-Konfiguration einfuegen" (mit `RELAY_API_URL`, `RELAY_API_KEY`, `RELAY_SERVER`) wurde aus der Sektion Portal-API entfernt, da er nicht mehr benoetigt wird. Die zugehoerigen ungenutzten i18n-Keys (`portalCopyConfig`, `portalConfigCopied`, `portalConfigHint`) wurden aufgeraeumt.
+
 ## [2.3.1] - 2026-04-16
 
 ### Behoben
