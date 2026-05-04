@@ -4,6 +4,11 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.4.4] - 2026-05-04
+
+### Behoben
+- **Kontingent-Berichte doppelt verschickt** — `send_usage_reports()` iterierte pro `SmtpUser` und sendete eine separate E-Mail je Datensatz. Hatten mehrere SMTP-Benutzer derselben Kunden dieselbe `contact_email` (typisch bei einem Kunden mit getrennten Trans-/Newsletter-Paketen oder mehreren Logins), bekam diese Adresse N quasi-identische E-Mails gleichzeitig (im Postfix-Log z. B. dreifacher Versand an `dbe@login-online.com` am 17.04.). Die Funktion gruppiert Empfaenger jetzt nach `contact_email` (case-insensitive); pro Adresse geht eine E-Mail mit einem Abschnitt je SMTP-Benutzer (Username, Paket, Limit, Versand, Restkontingent, Fortschrittsbalken, ggf. Warnung) raus. Template `_build_usage_report_html` akzeptiert eine Liste von User-Daten; pro-User-Block wurde nach `_build_user_section_html` ausgelagert. Einzelversand aus der Admin-UI (`send_single_usage_report`) nutzt dasselbe Template mit einer Ein-Element-Liste.
+
 ## [2.4.3] - 2026-04-16
 
 ### Behoben

@@ -342,29 +342,68 @@ def send_billing_report(db: Session, year_month: str) -> bool:
 
 # --- Customer Usage Reports ---
 
-def _build_usage_report_html(user_data: dict, operator_info: dict, year_month: str) -> str:
-    """Build HTML email for individual customer usage report."""
+def _build_user_section_html(user_data: dict) -> str:
+    """Build the per-user block (heading + table + progress bar) for a usage report."""
     sent = user_data["sent_count"]
     limit = user_data["package_limit"] or 0
     remaining = max(0, limit - sent)
     pct = min(100, round(sent / limit * 100)) if limit > 0 else 0
 
-    # Color based on usage
     if pct >= 90:
-        bar_color = "#ef4444"  # red
+        bar_color = "#ef4444"
         status_text = "Kontingent fast erschoepft"
     elif pct >= 75:
-        bar_color = "#f59e0b"  # amber
+        bar_color = "#f59e0b"
         status_text = "Kontingent zu mehr als 75% genutzt"
     else:
-        bar_color = "#22c55e"  # green
+        bar_color = "#22c55e"
         status_text = ""
 
     sent_fmt = f"{sent:,}".replace(",", ".")
     limit_fmt = f"{limit:,}".replace(",", ".") if limit else "-"
     remaining_fmt = f"{remaining:,}".replace(",", ".")
 
-    # Month label in German
+    company_line = f' <span style="color:#64748b;font-weight:400;">({user_data["company"]})</span>' if user_data.get("company") else ""
+
+    warning_html = ""
+    if status_text:
+        warning_html = f"""
+    <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:12px;margin:12px 0 0 0;">
+      <strong style="color:#92400e;">{status_text}</strong>
+    </div>"""
+
+    return f"""
+    <div style="margin:24px 0;">
+      <h2 style="font-size:16px;margin:0 0 12px 0;color:#1e293b;">SMTP-Benutzer: <strong>{user_data["username"]}</strong>{company_line}</h2>
+      <table style="width:100%;border-collapse:collapse;margin:0 0 12px 0;">
+        <tr>
+          <td style="padding:10px 14px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;width:40%">Paket</td>
+          <td style="padding:10px 14px;border:1px solid #e2e8f0;">{user_data["package_name"] or "-"}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Monatliches Limit</td>
+          <td style="padding:10px 14px;border:1px solid #e2e8f0;">{limit_fmt} E-Mails</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Gesendet</td>
+          <td style="padding:10px 14px;border:1px solid #e2e8f0;">{sent_fmt} E-Mails</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Verbleibend</td>
+          <td style="padding:10px 14px;border:1px solid #e2e8f0;">{remaining_fmt} E-Mails</td>
+        </tr>
+      </table>
+      <div>
+        <div style="background:#e2e8f0;border-radius:8px;height:20px;overflow:hidden;">
+          <div style="background:{bar_color};height:100%;width:{pct}%;border-radius:8px;min-width:2px;"></div>
+        </div>
+        <div style="text-align:right;font-size:13px;color:#64748b;margin-top:4px;">{pct}% genutzt</div>
+      </div>{warning_html}
+    </div>"""
+
+
+def _build_usage_report_html(users_data: list[dict], operator_info: dict, year_month: str) -> str:
+    """Build HTML email aggregating one or more SMTP users for a single contact recipient."""
     month_names = {
         "01": "Januar", "02": "Februar", "03": "Maerz", "04": "April",
         "05": "Mai", "06": "Juni", "07": "Juli", "08": "August",
@@ -373,7 +412,6 @@ def _build_usage_report_html(user_data: dict, operator_info: dict, year_month: s
     month_label = month_names.get(year_month[5:7], year_month[5:7])
     year_label = year_month[:4]
 
-    # Operator signature
     sig_parts = []
     if operator_info.get("responsible"):
         sig_parts.append(f'<strong>{operator_info["responsible"]}</strong>')
@@ -383,14 +421,16 @@ def _build_usage_report_html(user_data: dict, operator_info: dict, year_month: s
         sig_parts.append(f'Telefon: {operator_info["phone"]}')
     signature = "<br>".join(sig_parts)
 
-    warning_html = ""
-    if status_text:
-        warning_html = f"""
-    <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:14px;margin:20px 0;">
-      <strong style="color:#92400e;">{status_text}</strong>
-    </div>"""
+    if len(users_data) == 1:
+        u = users_data[0]
+        company_line = f' ({u["company"]})' if u.get("company") else ""
+        intro = (f'hier ist die aktuelle Uebersicht Ihres E-Mail-Kontingents fuer '
+                 f'<strong>{u["username"]}</strong>{company_line}:')
+    else:
+        intro = (f'hier ist die aktuelle Uebersicht Ihrer E-Mail-Kontingente fuer '
+                 f'Ihre <strong>{len(users_data)}</strong> SMTP-Benutzer:')
 
-    company_line = f' ({user_data["company"]})' if user_data.get("company") else ""
+    sections = "".join(_build_user_section_html(u) for u in users_data)
 
     return f"""\
 <html>
@@ -400,36 +440,9 @@ def _build_usage_report_html(user_data: dict, operator_info: dict, year_month: s
   </div>
   <div style="padding:32px;background:#ffffff;border:1px solid #e2e8f0;border-top:none;">
     <p>Guten Tag,</p>
-    <p>hier ist die aktuelle Uebersicht Ihres E-Mail-Kontingents fuer
-       <strong>{user_data["username"]}</strong>{company_line}:</p>
-
-    <table style="width:100%;border-collapse:collapse;margin:20px 0;">
-      <tr>
-        <td style="padding:10px 14px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;width:40%">Paket</td>
-        <td style="padding:10px 14px;border:1px solid #e2e8f0;">{user_data["package_name"] or "-"}</td>
-      </tr>
-      <tr>
-        <td style="padding:10px 14px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Monatliches Limit</td>
-        <td style="padding:10px 14px;border:1px solid #e2e8f0;">{limit_fmt} E-Mails</td>
-      </tr>
-      <tr>
-        <td style="padding:10px 14px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Gesendet</td>
-        <td style="padding:10px 14px;border:1px solid #e2e8f0;">{sent_fmt} E-Mails</td>
-      </tr>
-      <tr>
-        <td style="padding:10px 14px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Verbleibend</td>
-        <td style="padding:10px 14px;border:1px solid #e2e8f0;">{remaining_fmt} E-Mails</td>
-      </tr>
-    </table>
-
-    <div style="margin:20px 0;">
-      <div style="background:#e2e8f0;border-radius:8px;height:24px;overflow:hidden;">
-        <div style="background:{bar_color};height:100%;width:{pct}%;border-radius:8px;min-width:2px;transition:width 0.3s;"></div>
-      </div>
-      <div style="text-align:right;font-size:13px;color:#64748b;margin-top:4px;">{pct}% genutzt</div>
-    </div>
-    {warning_html}
-    <p>Mit freundlichen Gruessen</p>
+    <p>{intro}</p>
+    {sections}
+    <p style="margin-top:24px;">Mit freundlichen Gruessen</p>
     <div style="border-top:1px solid #e2e8f0;padding-top:16px;margin-top:16px;color:#64748b;font-size:14px;">
       {signature}
     </div>
@@ -439,10 +452,9 @@ def _build_usage_report_html(user_data: dict, operator_info: dict, year_month: s
 
 
 def send_usage_reports(db: Session) -> int:
-    """Send individual usage reports to all eligible customers. Returns count of sent reports."""
+    """Send aggregated usage reports — one e-mail per contact_email covering all eligible users."""
     year_month = datetime.now().strftime("%Y-%m")
 
-    # Get eligible users
     users = (
         db.query(SmtpUser)
         .filter(
@@ -459,7 +471,6 @@ def send_usage_reports(db: Session) -> int:
         logger.info("No eligible users for usage reports")
         return 0
 
-    # Get packages and usage data
     packages = {p.id: p for p in db.query(Package).all()}
     usage_rows = (
         db.query(UserMonthlyUsage)
@@ -468,7 +479,6 @@ def send_usage_reports(db: Session) -> int:
     )
     usage_map = {u.smtp_user_id: u.sent_count for u in usage_rows}
 
-    # Get operator info
     operator_info = {}
     try:
         abuse = get_abuse_settings(db)
@@ -480,7 +490,6 @@ def send_usage_reports(db: Session) -> int:
     except Exception:
         pass
 
-    # Get sender address
     settings = get_billing_settings(db)
     mail_from = settings.get("billing_report_from", "")
     if not mail_from:
@@ -489,37 +498,44 @@ def send_usage_reports(db: Session) -> int:
         logger.warning("Usage reports: no sender address configured")
         return 0
 
-    sent_count = 0
+    # Group eligible users by contact_email (case-insensitive) so each recipient gets one e-mail
+    grouped: dict[str, list[dict]] = {}
     for user in users:
         pkg = packages.get(user.package_id)
         if not pkg:
             continue
-
-        user_data = {
+        key = user.contact_email.strip().lower()
+        grouped.setdefault(key, []).append({
+            "contact_email": user.contact_email,
             "username": user.username,
             "company": user.company,
             "package_name": pkg.name,
             "package_limit": pkg.monthly_limit,
             "sent_count": usage_map.get(user.id, 0),
-        }
+        })
 
-        html = _build_usage_report_html(user_data, operator_info, year_month)
+    sent_count = 0
+    for key, users_data in grouped.items():
+        users_data.sort(key=lambda d: d["username"].lower())
+        recipient = users_data[0]["contact_email"]
+
+        html = _build_usage_report_html(users_data, operator_info, year_month)
 
         msg = MIMEMultipart()
         msg["From"] = mail_from
-        msg["To"] = user.contact_email
+        msg["To"] = recipient
         msg["Subject"] = f"SMTP-Relay Kontingent-Bericht \u2014 {year_month}"
         msg.attach(MIMEText(html, "html", "utf-8"))
 
         try:
             server = smtplib.SMTP("open-mail-relay", 25, timeout=30)
-            server.sendmail(mail_from, [user.contact_email], msg.as_string())
+            server.sendmail(mail_from, [recipient], msg.as_string())
             server.quit()
             sent_count += 1
         except Exception as e:
-            logger.error("Failed to send usage report to %s: %s", user.contact_email, e)
+            logger.error("Failed to send usage report to %s: %s", recipient, e)
 
-    logger.info("Sent %d usage reports for %s", sent_count, year_month)
+    logger.info("Sent %d usage reports for %s (%d eligible users)", sent_count, year_month, len(users))
     return sent_count
 
 
@@ -571,7 +587,7 @@ def send_single_usage_report(db: Session, user: SmtpUser) -> bool:
         "sent_count": usage.sent_count if usage else 0,
     }
 
-    html = _build_usage_report_html(user_data, operator_info, year_month)
+    html = _build_usage_report_html([user_data], operator_info, year_month)
 
     msg = MIMEMultipart()
     msg["From"] = mail_from
