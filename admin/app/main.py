@@ -29,6 +29,7 @@ from app.services.policy_server import PolicyServer
 from app.services.batch_worker import BatchWorker
 from app.services.rbl_worker import RblWorker
 from app.services.billing_worker import BillingWorker
+from app.services.cert_worker import CertWorker
 from app.services.throttle_service import seed_default_data
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ policy_server: PolicyServer | None = None
 batch_worker: BatchWorker | None = None
 rbl_worker: RblWorker | None = None
 billing_worker: BillingWorker | None = None
+cert_worker: CertWorker | None = None
 
 
 def create_default_admin():
@@ -180,7 +182,7 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
-    global stats_collector, policy_server, batch_worker, rbl_worker, billing_worker
+    global stats_collector, policy_server, batch_worker, rbl_worker, billing_worker, cert_worker
     stats_collector = StatsCollector()
     collector_task = asyncio.create_task(stats_collector.run())
 
@@ -196,6 +198,9 @@ async def lifespan(app: FastAPI):
 
     billing_worker = BillingWorker()
     billing_worker_task = asyncio.create_task(billing_worker.run())
+
+    cert_worker = CertWorker()
+    cert_worker_task = asyncio.create_task(cert_worker.run())
 
     # Ban expiry background task — check every 60 seconds
     async def ban_expiry_loop():
@@ -224,6 +229,14 @@ async def lifespan(app: FastAPI):
 
     from app.services.log_broadcaster import broadcaster
     broadcaster.stop()
+
+    if cert_worker:
+        cert_worker.stop()
+    cert_worker_task.cancel()
+    try:
+        await cert_worker_task
+    except asyncio.CancelledError:
+        pass
 
     if billing_worker:
         billing_worker.stop()

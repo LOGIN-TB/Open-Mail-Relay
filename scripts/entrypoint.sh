@@ -158,21 +158,31 @@ echo "Starting Dovecot (auth-only)..."
 dovecot
 
 # TLS-Zertifikate von Caddy synchronisieren
-sync_certs() {
-    CERT_BASE="/etc/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory"
-    CERT_DIR="${CERT_BASE}/${MAIL_HOSTNAME}"
-    TLS_DIR="/etc/postfix/tls"
+# Caddy nutzt standardmaessig mehrere Aussteller (Let's Encrypt + ZeroSSL) mit je
+# eigenem Unterverzeichnis. Daher NICHT auf einen Aussteller hart verdrahten, sondern
+# ueber alle Aussteller-Verzeichnisse suchen und das neueste .crt nehmen.
+find_cert() {
+    ls -t /etc/caddy-data/caddy/certificates/*/"${MAIL_HOSTNAME}"/"${MAIL_HOSTNAME}".crt 2>/dev/null | head -n1
+}
 
+sync_certs() {
+    TLS_DIR="/etc/postfix/tls"
     mkdir -p "$TLS_DIR"
 
-    if [ -f "${CERT_DIR}/${MAIL_HOSTNAME}.crt" ] && [ -f "${CERT_DIR}/${MAIL_HOSTNAME}.key" ]; then
-        cp "${CERT_DIR}/${MAIL_HOSTNAME}.crt" "${TLS_DIR}/cert.pem"
-        cp "${CERT_DIR}/${MAIL_HOSTNAME}.key" "${TLS_DIR}/key.pem"
+    CERT_FILE=$(find_cert)
+    KEY_FILE=""
+    if [ -n "$CERT_FILE" ]; then
+        KEY_FILE="${CERT_FILE%.crt}.key"
+    fi
+
+    if [ -n "$CERT_FILE" ] && [ -f "$CERT_FILE" ] && [ -f "$KEY_FILE" ]; then
+        cp "$CERT_FILE" "${TLS_DIR}/cert.pem"
+        cp "$KEY_FILE" "${TLS_DIR}/key.pem"
         chmod 600 "${TLS_DIR}/key.pem"
         chmod 644 "${TLS_DIR}/cert.pem"
         postconf -e "smtpd_tls_cert_file = ${TLS_DIR}/cert.pem"
         postconf -e "smtpd_tls_key_file = ${TLS_DIR}/key.pem"
-        echo "TLS certificates synced from Caddy"
+        echo "TLS certificates synced from Caddy (${CERT_FILE})"
     else
         # Keine Zertifikate vorhanden - TLS-Zertifikatspfade entfernen
         postconf -# "smtpd_tls_cert_file" 2>/dev/null || true
@@ -194,16 +204,14 @@ postfix check
 # - Danach: Alle 6 Stunden synchronisieren
 (
     # Warte auf Zertifikat falls Caddy es noch nicht bereit hat
-    CERT_BASE="/etc/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory"
-    CERT_FILE="${CERT_BASE}/${MAIL_HOSTNAME}/${MAIL_HOSTNAME}.crt"
     ATTEMPTS=0
     MAX_ATTEMPTS=10
-    while [ ! -f "$CERT_FILE" ] && [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+    while [ -z "$(find_cert)" ] && [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
         ATTEMPTS=$((ATTEMPTS + 1))
         echo "Waiting for TLS certificate from Caddy (attempt ${ATTEMPTS}/${MAX_ATTEMPTS})..."
         sleep 30
     done
-    if [ -f "$CERT_FILE" ]; then
+    if [ -n "$(find_cert)" ]; then
         sync_certs
         postfix reload 2>/dev/null || true
     fi

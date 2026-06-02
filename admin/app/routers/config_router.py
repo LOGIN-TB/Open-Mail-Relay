@@ -13,7 +13,7 @@ from app.services.postfix_service import (
     get_networks_count,
 )
 from app.services.docker_service import reload_postfix, restart_caddy, list_containers, restart_container
-from app.services.cert_service import get_tls_status, sync_certs_to_postfix, wait_for_cert
+from app.services.cert_service import get_tls_status, sync_certs_to_postfix, wait_for_cert, renew_certs
 
 router = APIRouter()
 
@@ -150,6 +150,27 @@ def sync_tls_certs(
     db.add(AuditLog(
         user_id=user.id,
         action="tls_cert_sync",
+        details=message,
+        ip_address=request.client.host if request.client else None,
+    ))
+    db.commit()
+
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    return {"message": message}
+
+
+@router.post("/tls/renew")
+def renew_tls_certs(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    success, message = renew_certs()
+
+    db.add(AuditLog(
+        user_id=user.id,
+        action="tls_cert_renew",
         details=message,
         ip_address=request.client.host if request.client else None,
     ))

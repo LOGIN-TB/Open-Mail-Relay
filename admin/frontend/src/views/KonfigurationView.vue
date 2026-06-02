@@ -19,6 +19,7 @@ const tls = ref<any>(null)
 const connection = ref<any>(null)
 const loading = ref(false)
 const syncing = ref(false)
+const renewing = ref(false)
 const saving = ref(false)
 const savingSteps = ref<{ step: string; success: boolean; detail: string }[]>([])
 
@@ -82,6 +83,19 @@ async function syncTlsCert() {
   }
 }
 
+async function renewTlsCert() {
+  renewing.value = true
+  try {
+    const { data } = await api.post('/config/tls/renew')
+    toast.add({ severity: 'success', summary: t.common.success, detail: data.message, life: 6000 })
+    await fetchConfig()
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 8000 })
+  } finally {
+    renewing.value = false
+  }
+}
+
 onMounted(fetchConfig)
 </script>
 
@@ -105,7 +119,9 @@ onMounted(fetchConfig)
         :tls="tls"
         :loading="loading"
         :syncing="syncing"
+        :renewing="renewing"
         @sync="syncTlsCert"
+        @renew="renewTlsCert"
       />
       <RetentionSettings />
       <TimezoneSettings />

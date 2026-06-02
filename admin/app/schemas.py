@@ -80,12 +80,25 @@ class ServerConfigUpdate(BaseModel):
     domain: str | None = None
 
 
+class CertInfo(BaseModel):
+    name: str  # Hostname (z.B. relay2.spamgo.de)
+    role: str  # "admin" | "mail" | "other"
+    exists: bool = False
+    subject: str | None = None
+    issuer: str | None = None
+    expiry: datetime | None = None
+    days_remaining: int | None = None
+    status: str = "missing"  # "valid" | "expiring" | "expired" | "missing"
+    is_postfix_cert: bool = False
+
+
 class TlsStatus(BaseModel):
     enabled: bool
     cert_exists: bool
     cert_expiry: datetime | None = None
     cert_subject: str | None = None
     postfix_has_cert: bool = False
+    certs: list[CertInfo] = []
 
 
 class PortInfo(BaseModel):

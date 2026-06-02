@@ -4,6 +4,16 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.5.0] - 2026-06-02
+
+### Hinzugefuegt
+- **TLS-Zertifikate: Uebersicht aller Zertifikate, automatische & manuelle Erneuerung** — Die Sektion „TLS-Zertifikat" (Konfiguration) zeigt jetzt **alle** von Caddy verwalteten Relay-Zertifikate (Mail- **und** Admin-Hostname) mit farbigem Status (`gueltig` / `laeuft bald ab` / `abgelaufen`), Resttagen, Aussteller und Subject; das in Postfix aktive Zertifikat ist markiert (`TlsStatus.vue`, `get_all_certs()` in `cert_service.py`, neues Schema `CertInfo`).
+- **Manuelle Erneuerung** — Neuer Button „Jetzt erneuern" (`POST /config/tls/renew` → `renew_certs()`): startet Caddy neu (erneuert faellige/abgelaufene Zertifikate; No-op bei gueltigen, kein Rate-Limit-Risiko) und synchronisiert anschliessend nach Postfix.
+- **Taeglicher Monitoring-Worker** (`cert_worker.py`) — prueft taeglich alle Zertifikate; bei Ablauf/Restlaufzeit <30 Tagen wird automatisch eine Erneuerung ausgeloest (gedrosselt auf max. 1x/12h) und eine Warn-E-Mail an `LETSENCRYPT_EMAIL` (Fallback `rbl_mail_to`) versendet (max. 1 Mail pro Zertifikat/Tag).
+
+### Behoben
+- **Abgelaufenes Zertifikat wurde angezeigt, obwohl ggf. ein gueltiges existierte** — `cert_service.py` und `scripts/entrypoint.sh` lasen nur das Let's-Encrypt-Verzeichnis bzw. nahmen das *erste* gefundene `.crt`. Caddy nutzt standardmaessig mehrere Aussteller (Let's Encrypt + ZeroSSL) mit je eigenem Verzeichnis; ein abgelaufenes Cert konnte ein gueltiges verdecken. Es wird nun ueber **alle** Aussteller-Verzeichnisse gesucht und das Cert mit dem spaetesten Ablaufdatum (bzw. in `entrypoint.sh` das neueste) verwendet.
+
 ## [2.4.4] - 2026-05-04
 
 ### Behoben
