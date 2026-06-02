@@ -4,6 +4,11 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.5.1] - 2026-06-02
+
+### Behoben
+- **„Jetzt erneuern" meldete faelschlich einen Fehler** — `renew_certs()` startete den Caddy-**Container neu** (`restart_caddy`). Da das Admin-Panel selbst durch Caddy geproxyt wird (`reverse_proxy admin-panel:8000`), kappte der Neustart die laufende HTTP-Verbindung des Browsers mitten im `POST /config/tls/renew` — die 200-Antwort erreichte das Frontend nie, es zeigte einen Fehler, obwohl die Erneuerung serverseitig erfolgreich war. `renew_certs()` nutzt jetzt einen **graceful `caddy reload`** (neue Funktion `reload_caddy()` in `docker_service.py`, via Caddy-Admin-API, Zero-Downtime): bestehende Verbindungen bleiben erhalten, eine erneute Zertifikatsverwaltung wird angestossen, anschliessend wird nach Postfix synchronisiert. Betrifft auch die automatische Erneuerung im `CertWorker` (kein kurzer TLS-Ausfall mehr bei Auto-Renew).
+
 ## [2.5.0] - 2026-06-02
 
 ### Hinzugefuegt

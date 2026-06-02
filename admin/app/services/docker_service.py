@@ -77,6 +77,32 @@ def restart_caddy() -> tuple[bool, str]:
         return False, str(e)
 
 
+def reload_caddy() -> tuple[bool, str]:
+    """Graceful Caddy-Reload (Zero-Downtime) statt Container-Neustart.
+
+    Wichtig: Das Admin-Panel wird durch Caddy geproxyt. Ein Container-Neustart
+    (restart_caddy) kappt die laufende HTTP-Verbindung des Browsers mitten im
+    Request -> der ausloesende Aufruf erhaelt nie seine Antwort und das Frontend
+    meldet faelschlich einen Fehler. 'caddy reload' laedt die Konfiguration ueber
+    die Admin-API (localhost:2019) neu, ohne bestehende Verbindungen zu trennen,
+    und stoesst dabei eine erneute Zertifikats-Verwaltung (Renew faelliger Certs) an.
+    """
+    container = get_caddy_container()
+    if container is None:
+        return False, "Caddy container not found"
+    try:
+        result = container.exec_run(
+            "caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile"
+        )
+        output = result.output.decode("utf-8", errors="replace") if result.output else ""
+        if result.exit_code == 0:
+            return True, "Caddy konfiguration neu geladen (graceful)"
+        return False, f"Caddy reload fehlgeschlagen: {output.strip()}"
+    except APIError as e:
+        logger.error(f"Caddy reload error: {e}")
+        return False, str(e)
+
+
 def get_container_status() -> dict:
     container = get_mail_container()
     if container is None:

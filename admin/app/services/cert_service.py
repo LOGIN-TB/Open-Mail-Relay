@@ -253,27 +253,30 @@ def sync_certs_to_postfix() -> tuple[bool, str]:
 
 
 def renew_certs() -> tuple[bool, str]:
-    """Erzwingt eine Zertifikats-Erneuerung: Caddy neu starten, auf Cert warten, nach Postfix syncen.
+    """Erzwingt eine Zertifikats-Erneuerung: Caddy graceful neu laden, auf Cert warten, nach Postfix syncen.
 
-    Caddy erneuert beim Neustart faellige/abgelaufene Zertifikate automatisch.
-    Fuer noch gueltige Zertifikate ist der Neustart ein No-op (keine Neu-Ausstellung,
-    daher kein Let's-Encrypt-Rate-Limit-Risiko). Die Cert-Dateien werden bewusst
-    NICHT geloescht.
+    Es wird BEWUSST ein graceful 'caddy reload' (Zero-Downtime) statt eines
+    Container-Neustarts verwendet: Das Admin-Panel laeuft selbst durch Caddy
+    (reverse_proxy), ein Neustart wuerde die HTTP-Verbindung des Auslosers kappen
+    und das Frontend wuerde faelschlich einen Fehler melden (obwohl die Erneuerung
+    serverseitig laeuft). Der Reload stoesst eine erneute Caddy-Zertifikatsverwaltung
+    an (Renew faelliger/abgelaufener Certs); fuer gueltige Certs ist es ein No-op
+    (kein Let's-Encrypt-Rate-Limit-Risiko). Die Cert-Dateien werden NICHT geloescht.
     """
-    from app.services.docker_service import restart_caddy
+    from app.services.docker_service import reload_caddy
 
     hostname = _get_mail_hostname()
 
-    caddy_ok, caddy_msg = restart_caddy()
+    caddy_ok, caddy_msg = reload_caddy()
     if not caddy_ok:
-        return False, f"Caddy-Neustart fehlgeschlagen: {caddy_msg}"
+        return False, f"Caddy-Reload fehlgeschlagen: {caddy_msg}"
 
-    # Caddy braucht nach dem Neustart einen Moment, bis das Cert (wieder) bereit ist
+    # Caddy braucht nach dem Reload einen Moment, bis ein evtl. neues Cert bereit ist
     if not wait_for_cert(hostname, timeout=60):
-        return False, "Caddy neu gestartet, aber Zertifikat war nicht innerhalb von 60s bereit."
+        return False, "Caddy neu geladen, aber Zertifikat war nicht innerhalb von 60s bereit."
 
     sync_ok, sync_msg = sync_certs_to_postfix()
     if not sync_ok:
-        return False, f"Caddy neu gestartet, aber Postfix-Sync fehlgeschlagen: {sync_msg}"
+        return False, f"Caddy neu geladen, aber Postfix-Sync fehlgeschlagen: {sync_msg}"
 
-    return True, f"Zertifikate erneuert (Caddy neu gestartet) und nach Postfix synchronisiert. {sync_msg}"
+    return True, f"Zertifikate erneuert (Caddy neu geladen) und nach Postfix synchronisiert. {sync_msg}"
