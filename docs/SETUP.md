@@ -406,28 +406,33 @@ iptables -A INPUT -p tcp --dport 443 -j ACCEPT
 
 ### Automatischer Ablauf
 
-1. **Caddy** beschafft Zertifikate automatisch via Let's Encrypt (HTTP-01 Challenge)
+1. **Caddy** beschafft Zertifikate automatisch fuer Mail- und Admin-Hostname (Let's Encrypt, **ZeroSSL als Fallback**; HTTP-01 / TLS-ALPN Challenge)
 2. **Caddy** erneuert Zertifikate automatisch vor Ablauf (ca. 30 Tage vorher)
-3. **Entrypoint-Skript** synchronisiert Zertifikate beim Container-Start von Caddy nach Postfix
+3. **Entrypoint-Skript** synchronisiert das Zertifikat beim Container-Start von Caddy nach Postfix — es sucht ueber **alle** Aussteller-Verzeichnisse und nimmt das neueste
 4. **Hintergrund-Task** wiederholt die Synchronisierung alle 6 Stunden
-5. **Admin-Panel** ermoeglicht manuelle Synchronisierung per Klick
-6. **Hostname-Aenderung** im Admin-Panel startet Caddy automatisch neu und synchronisiert das neue Zertifikat nach Postfix
+5. **Taeglicher Cert-Worker** (Admin-Panel) prueft alle Zertifikate, loest bei <30 Tagen Restlaufzeit/Ablauf automatisch eine Erneuerung aus (max. 1×/12h) und warnt per E-Mail an `LETSENCRYPT_EMAIL`
+6. **Admin-Panel** ermoeglicht manuelle Synchronisierung und manuelle Erneuerung per Klick
+7. **Hostname-Aenderung** im Admin-Panel startet Caddy automatisch neu und synchronisiert das neue Zertifikat nach Postfix
+
+> **Hinweis zum Erneuern:** Caddy stellt nur Zertifikate neu aus, die sich dem Ablauf naehern. Ein noch lange gueltiges Zertifikat behaelt nach „Jetzt erneuern" sein „gueltig bis"-Datum — das ist das erwartete Verhalten und schont die Rate-Limits der Aussteller.
+
+### Mehrere Aussteller (Let's Encrypt + ZeroSSL)
+
+Caddy nutzt standardmaessig Let's Encrypt und faellt bei Problemen automatisch auf ZeroSSL zurueck. Beide legen ein eigenes Verzeichnis unter `…/caddy/certificates/<aussteller>/<hostname>/` an. Es kann also fuer denselben Hostnamen mehr als ein Zertifikat geben (z. B. ein abgelaufenes Let's-Encrypt- neben einem gueltigen ZeroSSL-Zertifikat). Admin-Panel und Entrypoint waehlen deshalb immer das Zertifikat mit dem **spaetesten Ablaufdatum**.
+
+Verwaltete Zertifikate inkl. Ablauf/Aussteller pruefen:
+
+```bash
+docker compose exec admin-panel sh -c \
+  'for f in /etc/caddy-data/caddy/certificates/*/*/*.crt; do echo "$f"; openssl x509 -in "$f" -noout -enddate -issuer; echo; done'
+```
 
 ### Manuelle Synchronisierung
 
 Falls die automatische Synchronisierung nicht abgewartet werden soll:
 
-- Im Admin-Panel unter **Konfiguration** → **TLS-Zertifikat** → **Zertifikat synchronisieren**
-
-Oder per CLI:
-
-```bash
-docker compose exec open-mail-relay sh -c "\
-  cp /etc/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/relay.example.com/relay.example.com.crt /etc/postfix/tls/cert.pem && \
-  cp /etc/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/relay.example.com/relay.example.com.key /etc/postfix/tls/key.pem && \
-  chmod 600 /etc/postfix/tls/key.pem && \
-  postfix reload"
-```
+- Im Admin-Panel unter **Konfiguration** → **TLS-Zertifikat** → **Zertifikat synchronisieren** (uebernimmt das neueste Caddy-Zertifikat nach Postfix)
+- oder **Jetzt erneuern** (graceful Caddy-Reload + anschliessende Synchronisierung)
 
 ## Updates
 

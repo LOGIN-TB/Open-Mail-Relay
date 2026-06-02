@@ -8,7 +8,7 @@ Ein selbst gehosteter Open-Mail-Relay-Dienst (Smarthost) mit webbasiertem Admin-
 - **Zwei SMTP-Ports** - Port 25 (SMTP, STARTTLS optional) und Port 587 (Submission, STARTTLS erzwungen)
 - **Erzwungenes TLS ausgehend** - Alle ausgehenden Mails werden TLS-verschluesselt (min. TLS 1.2)
 - **Admin-Panel** - Webbasierte Verwaltung mit Dashboard, Netzwerk-Whitelist, Benutzerverwaltung und Serverkonfiguration
-- **Automatisches TLS** - Caddy beschafft und erneuert Let's Encrypt-Zertifikate automatisch. Synchronisierung nach Postfix alle 6 Stunden
+- **Automatisches TLS** - Caddy beschafft und erneuert Zertifikate automatisch (Let's Encrypt mit ZeroSSL als Fallback). Synchronisierung nach Postfix alle 6 Stunden. Zusaetzlich prueft ein taeglicher Worker alle Zertifikate, loest bei Bedarf eine Erneuerung aus und warnt per E-Mail vor Ablauf
 - **IP-basierte Autorisierung** - Relay nur fuer konfigurierte Netzwerke (CIDR), verwaltbar ueber das Admin-Panel. Jedes Netzwerk kann einem Inhaber zugeordnet werden
 - **SMTP-Benutzer-Authentifizierung (SASL)** - Zusaetzlich zur IP-Whitelist koennen SMTP-Benutzer mit Benutzername/Passwort von beliebigen IPs relayen. Dovecot-basiertes SASL, verwaltbar ueber das Admin-Panel inkl. PDF-Konfigurationsblatt
 - **Automatische IP-Sperre mit Firewall-Blocking** - Erkennt Brute-Force-Versuche (SASL-Auth-Fehler, Relay-Ablehnungen) und sperrt IPs automatisch mit progressiver Dauer (30 Min → 6 Std → 24 Std → 7 Tage). Admins koennen IPs auch manuell sperren/entsperren. Zwei Verteidigungslinien: **iptables/ipset** droppt Pakete gesperrter IPs auf Netzwerkebene (kein TCP-Handshake moeglich), Postfix CIDR Access Map als Fallback
@@ -135,9 +135,9 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - Hostname und Domain aendern
 - **Automatischer Caddy-Neustart bei Hostname-Aenderung** - Neues TLS-Zertifikat wird automatisch beschafft und nach Postfix synchronisiert
 - Fortschrittsanzeige bei Hostname-Aenderung (Postfix Reload → Caddy Neustart → TLS-Sync)
-- TLS-Zertifikat-Status (Let's Encrypt + Postfix)
+- **TLS-Zertifikat-Uebersicht** - Alle von Caddy verwalteten Zertifikate (Mail- **und** Admin-Hostname) mit farbigem Status (gueltig / laeuft bald ab / abgelaufen), Resttagen, Aussteller und Subject; das in Postfix aktive Zertifikat ist markiert
 - Verbindungseinstellungen zum Kopieren (SMTP-Host, Ports, TLS-Status)
-- Manuelle Zertifikat-Synchronisierung und Postfix-Reload
+- Manuelle Zertifikat-Synchronisierung, **manuelle Erneuerung** (graceful Caddy-Reload + Sync) und Postfix-Reload
 - **Zeitzone** konfigurierbar fuer alle Zeitstempel-Anzeigen im Admin-Panel (Standard: Europe/Berlin)
 - **Abuse-Seite** — Pflege der oeffentlichen Abuse- & Postmaster-Informationsseite (Kontaktdaten, Systeminformationen, Texte in DE und EN). Vorschau-Link oeffnet die Seite direkt
 - **Container-Verwaltung** — Status-Uebersicht und Neustart-Funktion fuer alle Docker-Container (Mail-Server, Caddy, Firewall) direkt aus dem Admin-Panel
@@ -198,14 +198,24 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 
 ## TLS-Zertifikate
 
-Caddy beschafft und erneuert TLS-Zertifikate automatisch via Let's Encrypt. Die Zertifikate werden alle 6 Stunden automatisch nach Postfix synchronisiert. Eine manuelle Synchronisierung ist jederzeit ueber das Admin-Panel moeglich.
+Caddy beschafft und erneuert TLS-Zertifikate automatisch fuer **beide** Hostnames (Mail-Hostname aus `postfix/main.cf` und `ADMIN_HOSTNAME`). Standard-Aussteller ist Let's Encrypt mit **ZeroSSL als Fallback** — pro Aussteller legt Caddy ein eigenes Verzeichnis an. Das Admin-Panel und die Postfix-Synchronisierung suchen ueber **alle** Aussteller-Verzeichnisse und verwenden stets das Zertifikat mit dem **spaetesten Ablaufdatum**; ein abgelaufenes Zertifikat eines Ausstellers kann so kein gueltiges eines anderen verdecken.
+
+Die Zertifikate werden alle 6 Stunden automatisch nach Postfix synchronisiert. Eine manuelle Synchronisierung ist jederzeit ueber das Admin-Panel moeglich.
+
+**Uebersicht & Status:** Unter *Konfiguration → TLS-Zertifikat* werden alle verwalteten Zertifikate mit farbigem Status (gueltig / laeuft bald ab / abgelaufen), Resttagen, Aussteller und Subject angezeigt. Das in Postfix aktive Zertifikat ist markiert.
+
+**Automatische Erneuerung & Warnung:** Caddy erneuert Zertifikate selbst, sobald sie sich dem Ablauf naehern (~30 Tage vorher). Zusaetzlich prueft ein **taeglicher Worker** alle Zertifikate; laeuft eines ab oder hat <30 Tage Restlaufzeit, wird automatisch eine Erneuerung ausgeloest (gedrosselt auf max. 1×/12h) und eine Warn-E-Mail an `LETSENCRYPT_EMAIL` versendet (Fallback: `rbl_mail_to`).
+
+**Manuelle Erneuerung:** Der Button *Jetzt erneuern* fuehrt einen **graceful Caddy-Reload** (Zero-Downtime, ohne Verbindungsabbruch) durch, stoesst die Zertifikatsverwaltung an und synchronisiert anschliessend nach Postfix.
+
+> **Hinweis:** „Erneuern" stellt **nicht** bei jedem Klick ein neues Zertifikat aus. Caddy erneuert nur Zertifikate, die sich dem Ablauf naehern — ein noch lange gueltiges Zertifikat behaelt sein Datum (das vermeidet unnoetige Neuausstellungen und schont die Rate-Limits der Aussteller). Ein gleichbleibendes „gueltig bis"-Datum nach dem Erneuern ist also das erwartete, gesunde Verhalten.
 
 Bei einer **Hostname-Aenderung** ueber das Admin-Panel wird Caddy automatisch neu gestartet, um ein neues Zertifikat zu beschaffen. Anschliessend wird das Zertifikat automatisch nach Postfix synchronisiert.
 
 **Voraussetzungen:**
 - DNS A-Records fuer den Mail-Hostname (aus `postfix/main.cf`) und `ADMIN_HOSTNAME` muessen auf den Server zeigen
 - **PTR-Record** (reverse DNS) der Server-IP muss auf den Mail-Hostname zeigen (Postfix verwendet `myhostname` als EHLO-Greeting - empfangende Server pruefen, ob EHLO und PTR uebereinstimmen)
-- Port 80 und 443 muessen von aussen erreichbar sein (fuer Let's Encrypt HTTP-01 Challenge)
+- Port 80 und 443 muessen von aussen erreichbar sein (fuer Let's Encrypt HTTP-01 / TLS-ALPN Challenge)
 
 ## Queue-Management
 
