@@ -267,7 +267,7 @@ def renew_certs() -> tuple[bool, str]:
 
     hostname = _get_mail_hostname()
 
-    caddy_ok, caddy_msg = reload_caddy()
+    caddy_ok, caddy_msg = reload_caddy(hostname)
     if not caddy_ok:
         return False, f"Caddy-Reload fehlgeschlagen: {caddy_msg}"
 

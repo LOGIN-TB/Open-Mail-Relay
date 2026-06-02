@@ -77,7 +77,7 @@ def restart_caddy() -> tuple[bool, str]:
         return False, str(e)
 
 
-def reload_caddy() -> tuple[bool, str]:
+def reload_caddy(mail_hostname: str = "") -> tuple[bool, str]:
     """Graceful Caddy-Reload (Zero-Downtime) statt Container-Neustart.
 
     Wichtig: Das Admin-Panel wird durch Caddy geproxyt. Ein Container-Neustart
@@ -86,13 +86,22 @@ def reload_caddy() -> tuple[bool, str]:
     meldet faelschlich einen Fehler. 'caddy reload' laedt die Konfiguration ueber
     die Admin-API (localhost:2019) neu, ohne bestehende Verbindungen zu trennen,
     und stoesst dabei eine erneute Zertifikats-Verwaltung (Renew faelliger Certs) an.
+
+    Das Caddyfile nutzt {$MAIL_HOSTNAME}. Diese Variable wird NICHT ueber Compose
+    gesetzt, sondern erst im Caddy-Entrypoint aus main.cf abgeleitet (caddy/entrypoint.sh)
+    und ist daher in einem 'docker exec'-Kontext leer. Ohne sie scheitert das Adaptieren
+    des Caddyfiles ("server block without any key ..."). Wir injizieren MAIL_HOSTNAME
+    daher explizit; ADMIN_HOSTNAME/LETSENCRYPT_EMAIL kommen aus der Container-Umgebung.
     """
     container = get_caddy_container()
     if container is None:
         return False, "Caddy container not found"
+
+    env = {"MAIL_HOSTNAME": mail_hostname} if mail_hostname else None
     try:
         result = container.exec_run(
-            "caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile"
+            "caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile",
+            environment=env,
         )
         output = result.output.decode("utf-8", errors="replace") if result.output else ""
         if result.exit_code == 0:

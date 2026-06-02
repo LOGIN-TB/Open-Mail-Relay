@@ -4,6 +4,11 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.5.2] - 2026-06-02
+
+### Behoben
+- **„Jetzt erneuern" scheiterte mit „server block without any key …"** — Der in v2.5.1 eingefuehrte `caddy reload` lief per `docker exec` und scheiterte beim Adaptieren des Caddyfiles, weil `{$MAIL_HOSTNAME}` leer war: Diese Variable wird nicht ueber Compose gesetzt, sondern erst im Caddy-Entrypoint aus `main.cf` abgeleitet (`caddy/entrypoint.sh`) und ist daher im exec-Kontext nicht vorhanden. Ein leerer Hostname macht den Mail-Site-Block zu einem Block ohne Key (= globale Optionen, nicht an erster Stelle) -> Adaptierungsfehler. `reload_caddy()` injiziert `MAIL_HOSTNAME` jetzt explizit beim exec (aus `_get_mail_hostname()`/`main.cf`); `ADMIN_HOSTNAME` und `LETSENCRYPT_EMAIL` kommen weiterhin aus der Container-Umgebung. Verifiziert via `caddy adapt`: ohne Variable exit 1 (Fehler), mit Variable exit 0.
+
 ## [2.5.1] - 2026-06-02
 
 ### Behoben
