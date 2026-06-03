@@ -12,6 +12,7 @@ from app.database import get_db
 from app.dependencies import require_admin
 from app.models import AuditLog, User, TransportRule, WarmupPhase
 from app.schemas import (
+    AutoDetectedDomain,
     ThrottleConfigOut,
     ThrottleConfigUpdate,
     ThrottleMetrics,
@@ -24,6 +25,7 @@ from app.schemas import (
 )
 from app.services.throttle_service import (
     get_all_config,
+    get_config,
     get_throttle_enabled,
     set_throttle_enabled,
     set_config,
@@ -33,6 +35,7 @@ from app.services.throttle_service import (
     get_sent_this_hour,
     get_held_count,
 )
+from app.services.mx_detection import detect_provider_domains
 from app.services.transport_generator import (
     apply_throttle_config,
     generate_transport_map,
@@ -69,6 +72,7 @@ def get_config_endpoint(
         enabled=cfg.get("enabled", "false").lower() == "true",
         warmup_start_date=cfg.get("warmup_start_date", ""),
         batch_interval_minutes=int(cfg.get("batch_interval_minutes", "10")),
+        mx_autodetect=cfg.get("mx_autodetect", "true").lower() == "true",
     )
 
 
@@ -83,6 +87,20 @@ def update_config_endpoint(
 
     if body.batch_interval_minutes is not None:
         set_config(db, "batch_interval_minutes", str(body.batch_interval_minutes))
+
+    if body.mx_autodetect is not None:
+        was = get_config(db, "mx_autodetect", "true").lower() == "true"
+        set_config(db, "mx_autodetect", str(body.mx_autodetect).lower())
+        if body.mx_autodetect != was:
+            _audit(
+                db, admin, "mx_autodetect_changed",
+                f"MX-Auto-Erkennung {'aktiviert' if body.mx_autodetect else 'deaktiviert'}",
+                request,
+            )
+            # Rebuild the transport map so the change takes effect immediately
+            if get_throttle_enabled(db):
+                generate_transport_map(db)
+                reload_postfix()
 
     if body.enabled is not None:
         was_enabled = get_throttle_enabled(db)
@@ -184,6 +202,21 @@ def list_transports(
     db: Session = Depends(get_db),
 ):
     return db.query(TransportRule).order_by(TransportRule.id).all()
+
+
+@router.get("/transports/auto-detected", response_model=list[AutoDetectedDomain])
+def list_auto_detected(
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Preview which recipient domains MX auto-detection routes to a throttled
+    transport. Reflects the same logic used when the transport map is built."""
+    explicit = {
+        r.domain_pattern
+        for r in db.query(TransportRule).filter(TransportRule.is_active == True).all()
+        if r.domain_pattern != "*"
+    }
+    return detect_provider_domains(db, explicit_patterns=explicit)
 
 
 @router.post("/transports", response_model=TransportRuleOut, status_code=201)

@@ -4,6 +4,13 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.6.0] - 2026-06-03
+
+### Hinzugefuegt
+- **Automatische MX-basierte Transport-Erkennung** — Empfaengerdomains, die bei Microsoft 365, Google Workspace oder Yahoo *gehostet* sind (erkennbar am MX-Eintrag, z. B. `*.mail.protection.outlook.com`), werden jetzt automatisch dem passenden gedrosselten Transport (`outlook_throttled` / `gmail_throttled` / `yahoo_throttled`) zugeordnet — nicht mehr nur die Consumer-Domains (outlook.com, gmail.com …). Bisher fielen geschaeftliche M365-Domains in `*  default_throttled` (Concurrency 5), wodurch sich ueber viele Tenants hinweg zu viele gleichzeitige Verbindungen gegen denselben Microsoft-„resource forest" stauten und Microsoft mit `421 4.3.2 The maximum number of concurrent connections per resource forest has exceeded a limit` drosselte (stundenlange Queue-Verzoegerungen). Neues Modul `mx_detection.py`: ermittelt die tatsaechlich bedienten Empfaengerdomains aus `mail_events`, klassifiziert sie per echtem MX-Lookup (dnspython) mit Fallback auf den real verwendeten `relay`-Host, und speist das Ergebnis in `generate_transport_map()` ein. Manuell angelegte Transport-Regeln haben immer Vorrang; der Provider→Transport-Name wird aus den vorhandenen Regeln abgeleitet (keine Zuordnung zu undefinierten Transports). MX-Ergebnisse werden auf Platte zwischengespeichert (positiv 14 Tage / negativ 2 Tage), damit das Neu-Generieren der Map kein DNS-Bombardement ausloest.
+- **Toggle `mx_autodetect`** (Default: an) in der Drosselungs-Konfiguration (`PUT /throttle/config`); Aenderung baut die Transport-Map bei aktiver Drosselung sofort neu und wird im Audit-Log protokolliert.
+- **Vorschau-Endpoint** `GET /throttle/transports/auto-detected` — listet die automatisch erkannten Domains samt Provider, Ziel-Transport und Erkennungsquelle (`mx` / `relay` / `cache`), ohne die Map zu veraendern.
+
 ## [2.5.2] - 2026-06-02
 
 ### Behoben

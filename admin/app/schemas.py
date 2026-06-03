@@ -294,11 +294,20 @@ class ThrottleConfigOut(BaseModel):
     enabled: bool = False
     warmup_start_date: str = ""
     batch_interval_minutes: int = 10
+    mx_autodetect: bool = True
 
 
 class ThrottleConfigUpdate(BaseModel):
     enabled: bool | None = None
     batch_interval_minutes: int | None = None
+    mx_autodetect: bool | None = None
+
+
+class AutoDetectedDomain(BaseModel):
+    domain: str
+    provider: str
+    transport_name: str
+    source: str  # "mx", "relay", or "cache"
 
 
 class TransportRuleOut(BaseModel):

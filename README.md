@@ -156,6 +156,7 @@ Beide Ports erlauben Relay fuer Absender-IPs aus den konfigurierten Netzwerken (
 - **Outbound-Rate-Limiting** mit automatischem 4-Phasen-Warmup (Woche 1-2, 3-4, 5-6, Etabliert)
 - Mails werden immer angenommen (250 OK), bei Limit-Ueberschreitung intern in HOLD-Queue gelegt
 - **Per-Domain Transport-Drosselung** fuer Gmail, Outlook, Yahoo etc. (Concurrency + Rate-Delay)
+- **Automatische MX-basierte Erkennung** — Empfaengerdomains, die bei Microsoft 365, Google Workspace oder Yahoo *gehostet* sind (erkannt am MX-Eintrag, z. B. `*.mail.protection.outlook.com`), werden automatisch dem passenden gedrosselten Transport zugeordnet — nicht nur die Consumer-Domains. Verhindert Microsofts `421 4.3.2 ... per resource forest`-Drosselung, wenn viele M365-gehostete Domains gleichzeitig zugestellt werden. Per Toggle `mx_autodetect` abschaltbar; Vorschau ueber `GET /throttle/transports/auto-detected`
 - **Batch-Worker** gibt gehaltene Mails zeitgesteuert in kontrollierten Batches frei
 - Warmup-Fortschrittsanzeige und Echtzeit-Metriken (gesendet/Stunde, gesendet/Tag, zurueckgehalten)
 - Alle Limits pro Phase konfigurierbar (Max/Stunde, Max/Tag, Burst)

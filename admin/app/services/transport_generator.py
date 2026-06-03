@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models import TransportRule
 from app.services.docker_service import exec_in_container, reload_postfix
+from app.services.mx_detection import detect_provider_domains, is_autodetect_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +30,33 @@ def generate_transport_map(db: Session) -> tuple[bool, str]:
 
     lines = ["# Auto-generated transport map — do not edit manually"]
     default_line = None
+    explicit_patterns: set[str] = set()
     for rule in rules:
         if rule.domain_pattern == "*":
             default_line = f"*    {rule.transport_name}:"
         else:
+            explicit_patterns.add(rule.domain_pattern)
             lines.append(f"{rule.domain_pattern}    {rule.transport_name}:")
+
+    # MX-based auto-detection: route recipient domains hosted on a throttled
+    # provider (M365/Google/Yahoo) to the matching transport, even when the
+    # domain itself isn't one of the provider's consumer domains. Explicit
+    # rules above always win. Failures must never break map generation.
+    if is_autodetect_enabled(db):
+        try:
+            detected = detect_provider_domains(db, explicit_patterns=explicit_patterns)
+            if detected:
+                lines.append("")
+                lines.append("# --- MX auto-detected (regenerated; do not edit) ---")
+                for entry in detected:
+                    lines.append(f"{entry['domain']}    {entry['transport_name']}:")
+                logger.info(f"MX auto-detection added {len(detected)} domain(s) to transport map")
+        except Exception as e:
+            logger.warning(f"MX auto-detection skipped: {e}")
 
     # Default (*) always last
     if default_line:
+        lines.append("")
         lines.append(default_line)
 
     lines.append("")  # trailing newline

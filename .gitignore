@@ -9,6 +9,7 @@ postfix/throttle_enabled
 postfix/transport
 postfix/dkim/
 postfix/client_access
+postfix/mx_cache.json
 
 # Python
 __pycache__/
