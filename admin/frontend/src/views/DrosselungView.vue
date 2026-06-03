@@ -4,6 +4,7 @@ import { useThrottleStore } from '../stores/throttle'
 import ThrottleOverview from '../components/throttle/ThrottleOverview.vue'
 import WarmupPhases from '../components/throttle/WarmupPhases.vue'
 import TransportRules from '../components/throttle/TransportRules.vue'
+import AutoDetectedDomains from '../components/throttle/AutoDetectedDomains.vue'
 import ThrottleSettings from '../components/throttle/ThrottleSettings.vue'
 import t from '../i18n/de'
 
@@ -35,6 +36,8 @@ onUnmounted(() => {
       <WarmupPhases :phases="store.phases" :warmup="store.warmup" />
       <TransportRules :transports="store.transports" />
     </div>
+
+    <AutoDetectedDomains :config="store.config" />
 
     <ThrottleSettings :config="store.config" />
   </div>

@@ -6,6 +6,14 @@ interface ThrottleConfig {
   enabled: boolean
   warmup_start_date: string
   batch_interval_minutes: number
+  mx_autodetect: boolean
+}
+
+interface AutoDetectedDomain {
+  domain: string
+  provider: string
+  transport_name: string
+  source: string
 }
 
 interface WarmupLimits {
@@ -51,13 +59,15 @@ interface ThrottleMetrics {
   limits: WarmupLimits | null
 }
 
-export type { ThrottleConfig, WarmupStatus, WarmupPhase, TransportRule, ThrottleMetrics, WarmupLimits }
+export type { ThrottleConfig, AutoDetectedDomain, WarmupStatus, WarmupPhase, TransportRule, ThrottleMetrics, WarmupLimits }
 
 export const useThrottleStore = defineStore('throttle', () => {
   const config = ref<ThrottleConfig | null>(null)
   const warmup = ref<WarmupStatus | null>(null)
   const phases = ref<WarmupPhase[]>([])
   const transports = ref<TransportRule[]>([])
+  const autoDetected = ref<AutoDetectedDomain[]>([])
+  const autoDetectedLoading = ref(false)
   const metrics = ref<ThrottleMetrics | null>(null)
   const loading = ref(false)
 
@@ -66,7 +76,7 @@ export const useThrottleStore = defineStore('throttle', () => {
     config.value = data
   }
 
-  async function updateConfig(body: { enabled?: boolean; batch_interval_minutes?: number }) {
+  async function updateConfig(body: { enabled?: boolean; batch_interval_minutes?: number; mx_autodetect?: boolean }) {
     const { data } = await api.put('/throttling/config', body)
     await fetchConfig()
     return data
@@ -120,6 +130,16 @@ export const useThrottleStore = defineStore('throttle', () => {
     await fetchTransports()
   }
 
+  async function fetchAutoDetected() {
+    autoDetectedLoading.value = true
+    try {
+      const { data } = await api.get('/throttling/transports/auto-detected')
+      autoDetected.value = data
+    } finally {
+      autoDetectedLoading.value = false
+    }
+  }
+
   async function fetchMetrics() {
     const { data } = await api.get('/throttling/metrics')
     metrics.value = data
@@ -135,11 +155,12 @@ export const useThrottleStore = defineStore('throttle', () => {
   }
 
   return {
-    config, warmup, phases, transports, metrics, loading,
+    config, warmup, phases, transports, autoDetected, autoDetectedLoading, metrics, loading,
     fetchConfig, updateConfig,
     fetchWarmup, setWarmupPhase, resetWarmup,
     fetchPhases, updatePhase,
     fetchTransports, createTransport, updateTransport, deleteTransport,
+    fetchAutoDetected,
     fetchMetrics, fetchAll,
   }
 })
