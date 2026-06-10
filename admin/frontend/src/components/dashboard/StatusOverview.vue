@@ -9,6 +9,7 @@ const router = useRouter()
 const props = defineProps<{
   rblStatus: { enabled: boolean; last_check_time: string; total_listings: number; all_clean: boolean } | null
   dnsStatus: { checked: boolean; all_ok: boolean; issues: number; last_check_time: string } | null
+  providerBlockStatus: { enabled: boolean; last_scan_time: string; active_count: number; all_clear: boolean } | null
 }>()
 
 // Warmup data (fetched internally like the old WarmupStatusCard)
@@ -69,6 +70,11 @@ const rblBorder = computed(() => {
 const dnsBorder = computed(() => {
   if (!props.dnsStatus?.checked) return '#94a3b8'
   return props.dnsStatus.all_ok ? '#22c55e' : '#ef4444'
+})
+
+const pbBorder = computed(() => {
+  if (!props.providerBlockStatus?.last_scan_time) return '#94a3b8'
+  return props.providerBlockStatus.active_count === 0 ? '#22c55e' : '#ef4444'
 })
 
 onMounted(fetchWarmup)
@@ -148,13 +154,35 @@ defineExpose({ fetchWarmup })
       </div>
       <i class="pi pi-angle-right status-arrow"></i>
     </div>
+
+    <!-- Provider blocks -->
+    <div
+      class="status-card"
+      :style="{ borderLeftColor: pbBorder }"
+      @click="router.push('/provider-sperren')"
+    >
+      <div class="status-icon" :style="{
+        background: !providerBlockStatus?.last_scan_time ? '#f8fafc' : providerBlockStatus.active_count === 0 ? '#f0fdf4' : '#fef2f2',
+        color: !providerBlockStatus?.last_scan_time ? '#94a3b8' : providerBlockStatus.active_count === 0 ? '#166534' : '#991b1b'
+      }">
+        <i :class="!providerBlockStatus?.last_scan_time ? 'pi pi-ban' : providerBlockStatus.active_count === 0 ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'"></i>
+      </div>
+      <div class="status-body">
+        <span class="status-label">{{ t.dashboard.providerBlock }}</span>
+        <span v-if="!providerBlockStatus?.last_scan_time" class="status-detail muted">{{ t.dashboard.providerBlockNoCheck }}</span>
+        <span v-else-if="providerBlockStatus.active_count === 0" class="status-detail ok">{{ t.dashboard.providerBlockClear }}</span>
+        <span v-else class="status-detail warn">{{ providerBlockStatus.active_count }} {{ t.dashboard.providerBlockActive }}</span>
+        <span v-if="providerBlockStatus?.last_scan_time" class="status-meta">{{ formatTime(providerBlockStatus.last_scan_time) }}</span>
+      </div>
+      <i class="pi pi-angle-right status-arrow"></i>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .status-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
 }
 

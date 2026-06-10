@@ -513,6 +513,80 @@ class RblStatus(BaseModel):
     all_clean: bool = False
 
 
+# --- Provider Block Monitoring ---
+
+class ProviderBlockSettings(BaseModel):
+    provider_block_enabled: str = "false"
+    provider_block_scan_interval_hours: str = "6"
+    provider_block_lookback_hours: str = "24"
+    provider_block_mail_to: str = ""
+    provider_block_mail_from: str = ""
+    provider_block_alert_on_change_only: str = "true"
+    provider_block_last_scan_time: str = ""
+
+
+class ProviderBlockSettingsUpdate(BaseModel):
+    provider_block_enabled: str | None = None
+    provider_block_scan_interval_hours: str | None = None
+    provider_block_lookback_hours: str | None = None
+    provider_block_mail_to: str | None = None
+    provider_block_mail_from: str | None = None
+    provider_block_alert_on_change_only: str | None = None
+
+
+class ProviderBlockDelisting(BaseModel):
+    portal: str = ""
+    docs: str = ""
+    steps: list[str] = []
+    variant: str = ""
+    variant_label: str = ""
+    note: str = ""
+
+
+class ProviderBlockOut(BaseModel):
+    id: int
+    provider: str
+    provider_label: str
+    blocked_ip: str
+    relay_host: str | None = None
+    block_code: str | None = None
+    sample_response: str | None = None
+    sample_queue_id: str | None = None
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None
+    hit_count: int = 1
+    status: str = "active"
+    delisting_submitted_at: datetime | None = None
+    resolved_at: datetime | None = None
+    notes: str = ""
+    delisting: ProviderBlockDelisting | None = None
+
+    model_config = {"from_attributes": True}
+
+    @field_validator("first_seen", "last_seen", "delisting_submitted_at", "resolved_at", mode="before")
+    @classmethod
+    def ensure_utc(cls, v):
+        if isinstance(v, datetime) and v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v
+
+
+class ProviderBlockScanResult(BaseModel):
+    scanned: int = 0
+    matched: int = 0
+    new_blocks: int = 0
+    resolved: int = 0
+    active_count: int = 0
+    scan_time: str = ""
+
+
+class ProviderBlockStatus(BaseModel):
+    enabled: bool = False
+    last_scan_time: str = ""
+    active_count: int = 0
+    all_clear: bool = False
+
+
 # --- DNS Record Checker ---
 
 class DnsCheckRecord(BaseModel):

@@ -19,6 +19,7 @@ from app.routers import throttle_router
 from app.routers import ip_bans_router
 from app.routers.abuse_router import public_router as abuse_public_router, admin_router as abuse_admin_router
 from app.routers import rbl_router
+from app.routers import provider_block_router
 from app.routers import dns_check_router
 from app.routers import billing_router
 from app.routers import portal_router
@@ -28,6 +29,7 @@ from app.services.sasl_service import sync_dovecot_users
 from app.services.policy_server import PolicyServer
 from app.services.batch_worker import BatchWorker
 from app.services.rbl_worker import RblWorker
+from app.services.provider_block_worker import ProviderBlockWorker
 from app.services.billing_worker import BillingWorker
 from app.services.cert_worker import CertWorker
 from app.services.throttle_service import seed_default_data
@@ -38,6 +40,7 @@ stats_collector: StatsCollector | None = None
 policy_server: PolicyServer | None = None
 batch_worker: BatchWorker | None = None
 rbl_worker: RblWorker | None = None
+provider_block_worker: ProviderBlockWorker | None = None
 billing_worker: BillingWorker | None = None
 cert_worker: CertWorker | None = None
 
@@ -182,7 +185,7 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
-    global stats_collector, policy_server, batch_worker, rbl_worker, billing_worker, cert_worker
+    global stats_collector, policy_server, batch_worker, rbl_worker, provider_block_worker, billing_worker, cert_worker
     stats_collector = StatsCollector()
     collector_task = asyncio.create_task(stats_collector.run())
 
@@ -195,6 +198,9 @@ async def lifespan(app: FastAPI):
 
     rbl_worker = RblWorker()
     rbl_worker_task = asyncio.create_task(rbl_worker.run())
+
+    provider_block_worker = ProviderBlockWorker()
+    provider_block_worker_task = asyncio.create_task(provider_block_worker.run())
 
     billing_worker = BillingWorker()
     billing_worker_task = asyncio.create_task(billing_worker.run())
@@ -254,6 +260,14 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
 
+    if provider_block_worker:
+        provider_block_worker.stop()
+    provider_block_worker_task.cancel()
+    try:
+        await provider_block_worker_task
+    except asyncio.CancelledError:
+        pass
+
     if batch_worker:
         batch_worker.stop()
     worker_task.cancel()
@@ -302,6 +316,7 @@ app.include_router(throttle_router.router, prefix="/api/throttling", tags=["thro
 app.include_router(ip_bans_router.router, prefix="/api/ip-bans", tags=["ip-bans"])
 app.include_router(abuse_admin_router, prefix="/api/abuse-settings", tags=["abuse-settings"])
 app.include_router(rbl_router.router, prefix="/api/rbl", tags=["rbl"])
+app.include_router(provider_block_router.router, prefix="/api/provider-blocks", tags=["provider-blocks"])
 app.include_router(dns_check_router.router, prefix="/api/dns-check", tags=["dns-check"])
 app.include_router(billing_router.router, prefix="/api/billing", tags=["billing"])
 app.include_router(portal_router.router, prefix="/api/portal", tags=["portal"])

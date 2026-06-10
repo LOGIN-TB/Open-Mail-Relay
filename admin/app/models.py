@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text, ForeignKey
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text, ForeignKey, UniqueConstraint
 from sqlalchemy.sql import func
 
 from app.database import Base
@@ -164,6 +164,38 @@ class IpBan(Base):
     is_active = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
     notes = Column(String, default="")
+
+
+class ProviderBlock(Base):
+    """A provider-internal sending block detected from bounce/deferred logs.
+
+    Unlike RBL listings (queried actively via DNS), these blocks are only
+    visible in the NDR text returned by large mailbox providers
+    (Microsoft/Outlook, Google, Yahoo, T-Online, …). One row per
+    (provider, blocked_ip) — the outbound relay IP that the provider rejected.
+    """
+    __tablename__ = "provider_blocks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    provider = Column(String, nullable=False, index=True)  # microsoft, google, yahoo, t-online, united-internet, other
+    provider_label = Column(String, nullable=False, default="")
+    blocked_ip = Column(String, nullable=False, index=True)  # our outbound IP the provider blocked
+    relay_host = Column(String, default="")  # sample remote MX host, e.g. *.protection.outlook.com
+    block_code = Column(String, default="")  # provider code if present, e.g. S3140
+    sample_response = Column(Text, default="")  # the remote NDR text
+    sample_queue_id = Column(String, default="")
+    first_seen = Column(DateTime, nullable=True)
+    last_seen = Column(DateTime, nullable=True, index=True)
+    hit_count = Column(Integer, default=1)
+    status = Column(String, nullable=False, default="active", index=True)  # active, resolved, acknowledged
+    delisting_submitted_at = Column(DateTime, nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
+    notes = Column(String, default="")
+    created_at = Column(DateTime, default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("provider", "blocked_ip", name="uq_provider_block_ip"),
+    )
 
 
 class AuditLog(Base):

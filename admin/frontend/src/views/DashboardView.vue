@@ -13,6 +13,7 @@ const dashboard = useDashboardStore()
 const bannedIps = ref<Set<string>>(new Set())
 const rblStatus = ref<{ enabled: boolean; last_check_time: string; total_listings: number; all_clean: boolean } | null>(null)
 const dnsStatus = ref<{ checked: boolean; all_ok: boolean; issues: number; last_check_time: string } | null>(null)
+const providerBlockStatus = ref<{ enabled: boolean; last_scan_time: string; active_count: number; all_clear: boolean } | null>(null)
 const statusOverview = ref<InstanceType<typeof StatusOverview> | null>(null)
 
 async function fetchBannedIps() {
@@ -42,6 +43,15 @@ async function fetchDnsStatus() {
   }
 }
 
+async function fetchProviderBlockStatus() {
+  try {
+    const { data } = await api.get('/provider-blocks/status')
+    providerBlockStatus.value = data
+  } catch {
+    // ignore
+  }
+}
+
 let refreshInterval: ReturnType<typeof setInterval>
 
 onMounted(() => {
@@ -49,11 +59,13 @@ onMounted(() => {
   fetchBannedIps()
   fetchRblStatus()
   fetchDnsStatus()
+  fetchProviderBlockStatus()
   refreshInterval = setInterval(() => {
     dashboard.fetchAll()
     fetchBannedIps()
     fetchRblStatus()
     fetchDnsStatus()
+    fetchProviderBlockStatus()
     statusOverview.value?.fetchWarmup()
   }, 30000)
 })
@@ -71,6 +83,7 @@ onUnmounted(() => {
       ref="statusOverview"
       :rbl-status="rblStatus"
       :dns-status="dnsStatus"
+      :provider-block-status="providerBlockStatus"
     />
 
     <StatsCards :stats="dashboard.stats" :loading="dashboard.loading" />

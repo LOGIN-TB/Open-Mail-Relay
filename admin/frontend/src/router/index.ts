@@ -60,6 +60,11 @@ const router = createRouter({
           component: () => import('../views/RblCheckerView.vue'),
         },
         {
+          path: 'provider-sperren',
+          name: 'provider-blocks',
+          component: () => import('../views/ProviderSperrenView.vue'),
+        },
+        {
           path: 'dns-pruefung',
           name: 'dns-checker',
           component: () => import('../views/DnsCheckView.vue'),
