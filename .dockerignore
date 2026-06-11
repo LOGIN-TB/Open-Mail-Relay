@@ -1,0 +1,11 @@
+# Root build context (mail-relay image) — exclude everything not COPYed
+.git
+.env
+admin/frontend/node_modules
+admin/frontend/dist
+**/__pycache__
+**/*.pyc
+*.db
+*.db-*
+*.log
+docs

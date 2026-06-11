@@ -4,6 +4,17 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.7.2] - 2026-06-11
+
+### Geaendert
+- **Backend-Abhaengigkeiten aktualisiert** — FastAPI 0.115 -> 0.136 (Starlette 1.3), uvicorn 0.34 -> 0.49, websockets 14 -> 16, SQLAlchemy 2.0.36 -> 2.0.50, Alembic 1.14 -> 1.18, pydantic-settings 2.7 -> 2.14, python-multipart 0.0.20 -> 0.0.32. Bisher ungepinnte Pakete (`cryptography`, `reportlab`, `dnspython`) sind jetzt exakt gepinnt — identische, reproduzierbare Builds auf allen Servern.
+- **passlib entfernt, bcrypt direkt** — `passlib` 1.7.4 ist seit 2020 unbetreut und erzwang den veralteten Pin `bcrypt==4.0.1`. Passwort-Hashing (`auth.py`) nutzt jetzt `bcrypt` 5.0 direkt. Format unveraendert (`$2b$12$`) — **alle bestehenden Login-Passwoerter funktionieren weiter** (verifiziert gegen passlib-erzeugte Hashes).
+- **Frontend-Build auf Node 22** — `node:20-alpine` ist seit April 2026 EOL (keine Sicherheitsupdates mehr); Build-Stage nutzt jetzt `node:22-alpine` (LTS). `npm install` -> `npm ci` (deterministisch aus `package-lock.json`).
+- **`.dockerignore` ergaenzt** (Root + admin/) — kleinere Build-Kontexte, keine lokalen Artefakte (node_modules, DBs, Logs) im Image-Build.
+
+### Migrationshinweise (Server 2 / weitere Server)
+- `./scripts/update.sh` reicht. Kein manueller Schritt noetig; Sessions und Passwoerter bleiben gueltig. Verifiziert: Login/JWT, WebSocket-Live-Log, alle API-Router, Firewall-Sync.
+
 ## [2.7.1] - 2026-06-11
 
 ### Sicherheit

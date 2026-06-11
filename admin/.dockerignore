@@ -1,0 +1,9 @@
+# Keep the Docker build context small and free of local artifacts
+frontend/node_modules
+frontend/dist
+**/__pycache__
+**/*.pyc
+.pytest_cache
+*.db
+*.db-*
+*.log

@@ -1,21 +1,24 @@
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 import jwt
-from passlib.context import CryptContext
 
 from app.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ALGORITHM = "HS256"
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    # bcrypt only uses the first 72 bytes; truncate explicitly to keep the
+    # behavior passlib had (silent truncation) for existing hashes.
+    try:
+        return bcrypt.checkpw(plain_password.encode()[:72], hashed_password.encode())
+    except ValueError:
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode()[:72], bcrypt.gensalt(rounds=12)).decode()
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
