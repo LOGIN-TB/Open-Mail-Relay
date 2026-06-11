@@ -4,6 +4,25 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.8.1] - 2026-06-11
+
+### Sicherheit
+- **JWT raus aus der WebSocket-URL** — Der Live-Log-Stream authentifiziert jetzt ueber das WebSocket-Subprotocol (`["omr.bearer", <token>]`) statt ueber `?token=...` in der URL; Query-Tokens landeten in Proxy-/Server-Logs. Der alte Query-Weg ist deaktiviert (Frontend+Backend werden im selben Image ausgeliefert, daher kein Kompatibilitaetsfenster noetig).
+- **Security-Header** — Das Admin-Panel sendet jetzt `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: same-origin`, `Permissions-Policy` sowie `Strict-Transport-Security` (nur hinter TLS/Caddy).
+
+### Hinzugefuegt
+- **Healthchecks fuer admin-panel und caddy** — Neuer unauthentifizierter Endpoint `GET /api/health` (Liveness); Caddy wird ueber seine Admin-API (`:2019/config/`) geprueft. Alle vier Container melden jetzt einen Health-Status.
+
+### Geaendert
+- **Caddy-Image gepinnt** — `caddy:2-alpine` (floating) -> `caddy:2.11-alpine` (Patch-Updates innerhalb 2.11, reproduzierbar ueber alle Server).
+
+### Geprueft, bewusst nicht umgesetzt
+- **Docker-Socket-Proxy**: Das Panel braucht exec/restart/logs auf den Containern — mit diesen Rechten bietet ein Socket-Proxy kaum zusaetzliche Isolation; der Socket bleibt read-only gemountet.
+- **Debian trixie** fuer das Relay-Image: bookworm erhaelt noch bis 2028 LTS-Updates; der Sprung (Postfix 3.10, Dovecot 2.4 mit neuem Config-Format!) ist ein eigenes Projekt und wird separat geplant.
+
+### Migrationshinweise (Server 2 / weitere Server)
+- `./scripts/update.sh` reicht (zieht auch das neue Caddy-Image). Kurzer Caddy-Neustart beim Image-Wechsel (~2 s, TLS-Zertifikate bleiben im Volume). Browser mit Strg+F5 neu laden, damit der Live-Log den neuen WebSocket-Weg nutzt.
+
 ## [2.8.0] - 2026-06-11
 
 ### Geaendert (Code-Qualitaet, kein Funktionsunterschied)

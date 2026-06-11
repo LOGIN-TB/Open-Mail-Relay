@@ -157,14 +157,23 @@ def update_retention(
 
 
 @router.websocket("/stream")
-async def log_stream(websocket: WebSocket, token: str = Query(...)):
-    # Authenticate via query parameter (WebSocket can't use headers easily)
-    payload = decode_access_token(token)
+async def log_stream(websocket: WebSocket):
+    # Authenticate via WebSocket subprotocol: the client sends
+    # ["omr.bearer", <jwt>]. Browsers cannot set an Authorization header on
+    # WebSockets, and a token in the query string would leak into proxy and
+    # server logs.
+    protocols = [
+        p.strip()
+        for p in websocket.headers.get("sec-websocket-protocol", "").split(",")
+        if p.strip()
+    ]
+    token = protocols[1] if len(protocols) == 2 and protocols[0] == "omr.bearer" else None
+    payload = decode_access_token(token) if token else None
     if payload is None:
         await websocket.close(code=4001, reason="Invalid token")
         return
 
-    await websocket.accept()
+    await websocket.accept(subprotocol="omr.bearer")
 
     from app.services.log_broadcaster import broadcaster
 

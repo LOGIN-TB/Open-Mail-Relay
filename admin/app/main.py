@@ -330,6 +330,25 @@ app.add_middleware(
 from starlette.middleware.base import BaseHTTPMiddleware
 app.add_middleware(BaseHTTPMiddleware, dispatch=portal_auth_middleware)
 
+
+@app.middleware("http")
+async def security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "same-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    # HSTS only when the request actually came in via TLS (Caddy)
+    if request.headers.get("x-forwarded-proto") == "https":
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    return response
+
+
+@app.get("/api/health")
+def health():
+    """Unauthenticated liveness probe for the Docker healthcheck."""
+    return {"status": "ok"}
+
 # API Routers
 app.include_router(auth_router.router, prefix="/api/auth", tags=["auth"])
 app.include_router(dashboard_router.router, prefix="/api/dashboard", tags=["dashboard"])

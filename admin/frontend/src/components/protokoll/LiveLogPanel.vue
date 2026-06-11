@@ -19,7 +19,8 @@ function connect() {
   if (!token) return
 
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
-  ws = new WebSocket(`${proto}//${location.host}/api/logs/stream?token=${token}`)
+  // Token als Subprotocol statt in der URL (landet sonst in Proxy-/Server-Logs)
+  ws = new WebSocket(`${proto}//${location.host}/api/logs/stream`, ['omr.bearer', token])
 
   ws.onopen = () => {
     connected.value = true
