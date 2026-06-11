@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useToast } from 'primevue/usetoast'
 import type { ThrottleConfig } from '../../stores/throttle'
 import { useThrottleStore } from '../../stores/throttle'
+import { useApi } from '../../composables/useApi'
 import t from '../../i18n/de'
 
 const props = defineProps<{
   config: ThrottleConfig | null
 }>()
 
-const toast = useToast()
+const { call } = useApi()
 const store = useThrottleStore()
 const expanded = ref(false)
 const togglingAutodetect = ref(false)
@@ -37,28 +37,27 @@ onMounted(() => {
 
 async function toggleAutodetect() {
   togglingAutodetect.value = true
-  try {
-    const next = !enabled.value
-    await store.updateConfig({ mx_autodetect: next })
-    if (next) {
-      await store.fetchAutoDetected()
-    } else {
-      store.autoDetected.length = 0
-    }
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.throttling.settingsSaved, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    togglingAutodetect.value = false
-  }
+  await call(
+    async () => {
+      const next = !enabled.value
+      await store.updateConfig({ mx_autodetect: next })
+      if (next) {
+        await store.fetchAutoDetected()
+      } else {
+        store.autoDetected.length = 0
+      }
+      return { data: true }
+    },
+    { success: t.throttling.settingsSaved },
+  )
+  togglingAutodetect.value = false
 }
 
 async function refresh() {
-  try {
+  await call(async () => {
     await store.fetchAutoDetected()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+    return { data: true }
+  })
 }
 </script>
 

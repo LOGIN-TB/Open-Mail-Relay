@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useToast } from 'primevue/usetoast'
 import api from '../../api/client'
+import { useApi } from '../../composables/useApi'
 import t from '../../i18n/de'
 
-const toast = useToast()
+const { call, silent } = useApi()
 
 interface AbuseSettings {
   abuse_email: string
@@ -26,33 +26,26 @@ const settings = ref<AbuseSettings | null>(null)
 const saving = ref(false)
 
 onMounted(async () => {
-  try {
-    const { data } = await api.get('/abuse-settings')
-    settings.value = data
-  } catch {
-    // ignore – fields stay empty
-  }
+  // Fehler bewusst ignoriert – Felder bleiben leer
+  settings.value = await silent(() => api.get<AbuseSettings>('/abuse-settings'))
 })
 
 async function save() {
   if (!settings.value) return
   saving.value = true
-  try {
-    const { abuse_email, postmaster_email, abuse_responsible, abuse_phone,
-            abuse_imprint_url, abuse_data_retention, abuse_spam_filtering, abuse_rfc2142,
-            abuse_data_retention_en, abuse_spam_filtering_en, abuse_rfc2142_en } = settings.value
-    const { data } = await api.put('/abuse-settings', {
+  const { abuse_email, postmaster_email, abuse_responsible, abuse_phone,
+          abuse_imprint_url, abuse_data_retention, abuse_spam_filtering, abuse_rfc2142,
+          abuse_data_retention_en, abuse_spam_filtering_en, abuse_rfc2142_en } = settings.value
+  const data = await call(
+    () => api.put<AbuseSettings>('/abuse-settings', {
       abuse_email, postmaster_email, abuse_responsible, abuse_phone,
       abuse_imprint_url, abuse_data_retention, abuse_spam_filtering, abuse_rfc2142,
       abuse_data_retention_en, abuse_spam_filtering_en, abuse_rfc2142_en,
-    })
-    settings.value = data
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.config.abusePageSaved, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    saving.value = false
-  }
+    }),
+    { success: t.config.abusePageSaved },
+  )
+  if (data) settings.value = data
+  saving.value = false
 }
 
 function openPreview() {

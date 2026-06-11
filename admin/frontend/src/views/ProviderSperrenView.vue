@@ -2,9 +2,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import api from '../api/client'
+import { useApi } from '../composables/useApi'
 import t from '../i18n/de'
 
 const toast = useToast()
+const { call, silent } = useApi()
 
 const loading = ref(false)
 const saving = ref(false)
@@ -46,7 +48,22 @@ const blocks = ref<Block[]>([])
 const lastScanTime = ref('')
 const expandedId = ref<number | null>(null)
 
-function loadSettings(data: any) {
+interface ProviderBlockSettings {
+  provider_block_enabled?: string
+  provider_block_scan_interval_hours?: string
+  provider_block_lookback_hours?: string
+  provider_block_alert_on_change_only?: string
+  provider_block_mail_to?: string
+  provider_block_mail_from?: string
+  provider_block_last_scan_time?: string
+}
+
+interface ServerInfo {
+  name?: string
+  ip?: string
+}
+
+function loadSettings(data: ProviderBlockSettings) {
   enabled.value = data.provider_block_enabled === 'true'
   intervalHours.value = parseInt(data.provider_block_scan_interval_hours || '6')
   lookbackHours.value = parseInt(data.provider_block_lookback_hours || '24')
@@ -57,100 +74,82 @@ function loadSettings(data: any) {
 }
 
 async function fetchServerInfo() {
-  try {
-    const { data } = await api.get('/rbl/server-info')
+  const data = await silent(() => api.get<ServerInfo>('/rbl/server-info'))
+  if (data !== null) {
     serverName.value = data.name || ''
     serverIp.value = data.ip || ''
-  } catch { /* ignore */ }
+  }
 }
 
 async function fetchSettings() {
   loading.value = true
-  try {
-    const { data } = await api.get('/provider-blocks')
-    loadSettings(data)
-  } finally {
-    loading.value = false
-  }
+  const data = await silent(() => api.get<ProviderBlockSettings>('/provider-blocks'))
+  if (data !== null) loadSettings(data)
+  loading.value = false
 }
 
 async function fetchBlocks() {
-  try {
-    const { data } = await api.get('/provider-blocks/blocks')
-    blocks.value = data
-  } catch { /* ignore */ }
+  const data = await silent(() => api.get<Block[]>('/provider-blocks/blocks'))
+  if (data !== null) blocks.value = data
 }
 
 async function saveSettings() {
   saving.value = true
-  try {
-    const payload = {
-      provider_block_enabled: enabled.value ? 'true' : 'false',
-      provider_block_scan_interval_hours: String(intervalHours.value),
-      provider_block_lookback_hours: String(lookbackHours.value),
-      provider_block_alert_on_change_only: alertOnChangeOnly.value ? 'true' : 'false',
-      provider_block_mail_to: mailTo.value,
-      provider_block_mail_from: mailFrom.value,
-    }
-    const { data } = await api.put('/provider-blocks', payload)
-    loadSettings(data)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.providerBlocks.settingsSaved, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    saving.value = false
+  const payload = {
+    provider_block_enabled: enabled.value ? 'true' : 'false',
+    provider_block_scan_interval_hours: String(intervalHours.value),
+    provider_block_lookback_hours: String(lookbackHours.value),
+    provider_block_alert_on_change_only: alertOnChangeOnly.value ? 'true' : 'false',
+    provider_block_mail_to: mailTo.value,
+    provider_block_mail_from: mailFrom.value,
   }
+  const data = await call(
+    () => api.put<ProviderBlockSettings>('/provider-blocks', payload),
+    { success: t.providerBlocks.settingsSaved },
+  )
+  if (data !== null) loadSettings(data)
+  saving.value = false
 }
 
 async function runScan() {
   scanning.value = true
-  try {
-    const { data } = await api.post('/provider-blocks/scan')
+  const data = await call(
+    () => api.post<{ scan_time?: string }>('/provider-blocks/scan'),
+    { success: t.providerBlocks.scanComplete },
+  )
+  if (data !== null) {
     lastScanTime.value = data.scan_time || ''
     await fetchBlocks()
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.providerBlocks.scanComplete, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    scanning.value = false
   }
+  scanning.value = false
 }
 
 async function sendTestEmail() {
   sendingTest.value = true
-  try {
-    const { data } = await api.post('/provider-blocks/test-email')
-    if (data.success) {
-      toast.add({ severity: 'success', summary: t.common.success, detail: t.providerBlocks.testEmailSent, life: 3000 })
-    } else {
-      toast.add({ severity: 'error', summary: t.common.error, detail: t.providerBlocks.testEmailFailed, life: 5000 })
-    }
-  } catch {
+  const data = await silent(() => api.post<{ success: boolean }>('/provider-blocks/test-email'))
+  if (data?.success) {
+    toast.add({ severity: 'success', summary: t.common.success, detail: t.providerBlocks.testEmailSent, life: 3000 })
+  } else {
     toast.add({ severity: 'error', summary: t.common.error, detail: t.providerBlocks.testEmailFailed, life: 5000 })
-  } finally {
-    sendingTest.value = false
   }
+  sendingTest.value = false
 }
 
 async function markSubmitted(b: Block) {
-  try {
-    const { data } = await api.post(`/provider-blocks/blocks/${b.id}/submitted`)
-    Object.assign(b, data)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.providerBlocks.markSubmittedDone, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  const data = await call(
+    () => api.post<Block>(`/provider-blocks/blocks/${b.id}/submitted`),
+    { success: t.providerBlocks.markSubmittedDone },
+  )
+  if (data !== null) Object.assign(b, data)
 }
 
 async function markResolved(b: Block) {
   if (!confirm(t.providerBlocks.confirmResolve)) return
-  try {
-    await api.post(`/provider-blocks/blocks/${b.id}/resolve`)
-    await fetchBlocks()
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.providerBlocks.markResolvedDone, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  const result = await call(
+    () => api.post<void>(`/provider-blocks/blocks/${b.id}/resolve`),
+    { success: t.providerBlocks.markResolvedDone },
+  )
+  if (result !== null) await fetchBlocks()
 }
 
 function toggleExpand(id: number) {

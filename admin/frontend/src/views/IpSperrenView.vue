@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import api from '../api/client'
+import { useApi } from '../composables/useApi'
 import IpBanList from '../components/ip-bans/IpBanList.vue'
 import IpBanForm from '../components/ip-bans/IpBanForm.vue'
 import IpBanSettings from '../components/ip-bans/IpBanSettings.vue'
@@ -11,7 +11,7 @@ import t from '../i18n/de'
 import type { IpBanItem } from '../components/ip-bans/IpBanList.vue'
 import type { BanSettingsData } from '../components/ip-bans/IpBanSettings.vue'
 
-const toast = useToast()
+const { call, silent } = useApi()
 const confirm = useConfirm()
 
 const bans = ref<IpBanItem[]>([])
@@ -28,7 +28,7 @@ let refreshInterval: ReturnType<typeof setInterval>
 async function fetchBans() {
   loading.value = true
   try {
-    const { data } = await api.get('/ip-bans')
+    const { data } = await api.get<IpBanItem[]>('/ip-bans')
     bans.value = data
   } finally {
     loading.value = false
@@ -36,32 +36,24 @@ async function fetchBans() {
 }
 
 async function fetchSettings() {
-  try {
-    const { data } = await api.get('/ip-bans/settings')
+  const data = await silent(() => api.get<BanSettingsData>('/ip-bans/settings'))
+  if (data) {
     banSettings.value = data
-  } catch {
-    // Use defaults
   }
 }
 
 async function createBan(payload: { ip_address: string; reason: string; notes: string }) {
-  try {
-    await api.post('/ip-bans', payload)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.ipBans.banCreated, life: 3000 })
+  const res = await call(() => api.post('/ip-bans', payload), { success: t.ipBans.banCreated })
+  if (res !== null) {
     showForm.value = false
     await fetchBans()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
   }
 }
 
 async function updateNotes(banId: number, notes: string) {
-  try {
-    await api.put(`/ip-bans/${banId}`, { notes })
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.ipBans.banUpdated, life: 3000 })
+  const res = await call(() => api.put(`/ip-bans/${banId}`, { notes }), { success: t.ipBans.banUpdated })
+  if (res !== null) {
     await fetchBans()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
   }
 }
 
@@ -76,12 +68,9 @@ function confirmUnban(ban: IpBanItem) {
 }
 
 async function doUnban(banId: number) {
-  try {
-    await api.delete(`/ip-bans/${banId}`)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.ipBans.unbanned, life: 3000 })
+  const res = await call(() => api.delete(`/ip-bans/${banId}`), { success: t.ipBans.unbanned })
+  if (res !== null) {
     await fetchBans()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
   }
 }
 
@@ -96,22 +85,16 @@ function confirmDelete(ban: IpBanItem) {
 }
 
 async function doDelete(banId: number) {
-  try {
-    await api.delete(`/ip-bans/${banId}`)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.ipBans.banDeleted, life: 3000 })
+  const res = await call(() => api.delete(`/ip-bans/${banId}`), { success: t.ipBans.banDeleted })
+  if (res !== null) {
     await fetchBans()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
   }
 }
 
 async function saveSettings(settings: BanSettingsData) {
-  try {
-    await api.put('/ip-bans/settings', settings)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.ipBans.settingsSaved, life: 3000 })
+  const res = await call(() => api.put('/ip-bans/settings', settings), { success: t.ipBans.settingsSaved })
+  if (res !== null) {
     await fetchSettings()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
   }
 }
 

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { apiErrorDetail } from '../composables/useApi'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
@@ -21,8 +22,8 @@ async function handleLogin() {
   try {
     await auth.login(username.value, password.value)
     router.push({ name: 'dashboard' })
-  } catch (e: any) {
-    error.value = e.response?.data?.detail ?? t.login.error
+  } catch (e) {
+    error.value = apiErrorDetail(e, t.login.error)
   } finally {
     loading.value = false
   }

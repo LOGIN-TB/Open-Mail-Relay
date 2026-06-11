@@ -1,22 +1,40 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import api from '../api/client'
+import { useApi } from '../composables/useApi'
 import SmtpUserList from '../components/smtp-users/SmtpUserList.vue'
 import SmtpUserForm from '../components/smtp-users/SmtpUserForm.vue'
 import SmtpUserCredentials from '../components/smtp-users/SmtpUserCredentials.vue'
 import t from '../i18n/de'
 
+import type { SmtpUser } from '../types/api'
 import type { SmtpUserItem } from '../components/smtp-users/SmtpUserList.vue'
 import type { SmtpUserEditData } from '../components/smtp-users/SmtpUserForm.vue'
 
-const toast = useToast()
+const { call, silent } = useApi()
 const confirm = useConfirm()
 
 interface PackageOption {
   id: number
   name: string
+}
+
+interface SmtpUserCredentialsData {
+  id: number
+  username: string
+  password: string
+}
+
+interface SaveUserPayload {
+  id?: number
+  username?: string
+  company: string | null
+  service: string | null
+  mail_domain: string | null
+  contact_email: string | null
+  receive_reports: boolean
+  package_id: number | null
 }
 
 const users = ref<SmtpUserItem[]>([])
@@ -27,23 +45,20 @@ const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogUser = ref<SmtpUserEditData | null>(null)
 
-const credentialsUser = ref<{ id: number; username: string; password: string } | null>(null)
+const credentialsUser = ref<SmtpUserCredentialsData | null>(null)
 
 async function fetchPackages() {
-  try {
-    const { data } = await api.get('/billing/packages')
-    packages.value = data.map((p: any) => ({ id: p.id, name: p.name }))
-  } catch { /* ignore */ }
+  const data = await silent(() => api.get<PackageOption[]>('/billing/packages'))
+  if (data !== null) {
+    packages.value = data.map((p) => ({ id: p.id, name: p.name }))
+  }
 }
 
 async function fetchUsers() {
   loading.value = true
-  try {
-    const { data } = await api.get('/smtp-users')
-    users.value = data
-  } finally {
-    loading.value = false
-  }
+  const data = await silent(() => api.get<SmtpUserItem[]>('/smtp-users'))
+  if (data !== null) users.value = data
+  loading.value = false
 }
 
 function openCreate() {
@@ -69,35 +84,35 @@ function closeDialog() {
   dialogVisible.value = false
 }
 
-async function saveUser(payload: any) {
-  try {
-    if (payload.id) {
-      // Update
-      const { id, ...body } = payload
-      await api.put(`/smtp-users/${id}`, body)
-      toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.userUpdated, life: 3000 })
-      dialogVisible.value = false
-    } else {
-      // Create
-      const { data } = await api.post('/smtp-users', payload)
-      toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.userCreated, life: 3000 })
-      dialogVisible.value = false
-      credentialsUser.value = { id: data.id, username: data.username, password: data.password }
-    }
-    await fetchUsers()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
+async function saveUser(payload: SaveUserPayload) {
+  if (payload.id) {
+    // Update
+    const { id, ...body } = payload
+    const result = await call(
+      () => api.put<SmtpUser>(`/smtp-users/${id}`, body),
+      { success: t.smtpUsers.userUpdated },
+    )
+    if (result === null) return
+    dialogVisible.value = false
+  } else {
+    // Create
+    const data = await call(
+      () => api.post<SmtpUserCredentialsData>('/smtp-users', payload),
+      { success: t.smtpUsers.userCreated },
+    )
+    if (data === null) return
+    dialogVisible.value = false
+    credentialsUser.value = { id: data.id, username: data.username, password: data.password }
   }
+  await fetchUsers()
 }
 
 async function toggleActive(user: SmtpUserItem) {
-  try {
-    await api.put(`/smtp-users/${user.id}`, { is_active: !user.is_active })
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.userUpdated, life: 3000 })
-    await fetchUsers()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  const result = await call(
+    () => api.put<SmtpUser>(`/smtp-users/${user.id}`, { is_active: !user.is_active }),
+    { success: t.smtpUsers.userUpdated },
+  )
+  if (result !== null) await fetchUsers()
 }
 
 function confirmRegenerate(user: SmtpUserItem) {
@@ -111,30 +126,27 @@ function confirmRegenerate(user: SmtpUserItem) {
 }
 
 async function regeneratePassword(user: SmtpUserItem) {
-  try {
-    const { data } = await api.post(`/smtp-users/${user.id}/regenerate-password`)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.passwordRegenerated, life: 3000 })
-    credentialsUser.value = { id: data.id, username: data.username, password: data.password }
-    await fetchUsers()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  const data = await call(
+    () => api.post<SmtpUserCredentialsData>(`/smtp-users/${user.id}/regenerate-password`),
+    { success: t.smtpUsers.passwordRegenerated },
+  )
+  if (data === null) return
+  credentialsUser.value = { id: data.id, username: data.username, password: data.password }
+  await fetchUsers()
 }
 
 async function downloadPdf(user: SmtpUserItem) {
-  try {
-    const response = await api.get(`/smtp-users/${user.id}/config-pdf`, {
-      responseType: 'blob',
-    })
-    const url = window.URL.createObjectURL(new Blob([response.data]))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `smtp-config-${user.username}.pdf`
-    link.click()
-    window.URL.revokeObjectURL(url)
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: 'PDF-Download fehlgeschlagen', life: 5000 })
-  }
+  const data = await call(
+    () => api.get<Blob>(`/smtp-users/${user.id}/config-pdf`, { responseType: 'blob' }),
+    { error: 'PDF-Download fehlgeschlagen' },
+  )
+  if (data === null) return
+  const url = window.URL.createObjectURL(new Blob([data]))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `smtp-config-${user.username}.pdf`
+  link.click()
+  window.URL.revokeObjectURL(url)
 }
 
 function confirmSendUsageReport(user: SmtpUserItem) {
@@ -147,12 +159,10 @@ function confirmSendUsageReport(user: SmtpUserItem) {
 }
 
 async function sendUsageReport(user: SmtpUserItem) {
-  try {
-    await api.post(`/smtp-users/${user.id}/send-usage-report`)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.usageReportSent, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  await call(
+    () => api.post<void>(`/smtp-users/${user.id}/send-usage-report`),
+    { success: t.smtpUsers.usageReportSent },
+  )
 }
 
 function confirmSendCredentials(user: SmtpUserItem) {
@@ -165,12 +175,10 @@ function confirmSendCredentials(user: SmtpUserItem) {
 }
 
 async function sendCredentials(user: SmtpUserItem) {
-  try {
-    await api.post(`/smtp-users/${user.id}/send-credentials`)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.credentialsSent, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  await call(
+    () => api.post<void>(`/smtp-users/${user.id}/send-credentials`),
+    { success: t.smtpUsers.credentialsSent },
+  )
 }
 
 function confirmDelete(user: SmtpUserItem) {
@@ -184,13 +192,11 @@ function confirmDelete(user: SmtpUserItem) {
 }
 
 async function deleteUser(userId: number) {
-  try {
-    await api.delete(`/smtp-users/${userId}`)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.smtpUsers.userDeleted, life: 3000 })
-    await fetchUsers()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  const result = await call(
+    () => api.delete<void>(`/smtp-users/${userId}`),
+    { success: t.smtpUsers.userDeleted },
+  )
+  if (result !== null) await fetchUsers()
 }
 
 onMounted(() => {

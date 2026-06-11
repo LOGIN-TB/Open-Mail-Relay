@@ -2,21 +2,23 @@
 import { ref, onMounted } from 'vue'
 import { useProtokollStore } from '../stores/protokoll'
 import api from '../api/client'
+import { useApi } from '../composables/useApi'
 import EventFilters from '../components/protokoll/EventFilters.vue'
 import EventTable from '../components/protokoll/EventTable.vue'
 import LiveLogPanel from '../components/protokoll/LiveLogPanel.vue'
 import t from '../i18n/de'
 
+import type { IpBan } from '../types/api'
+
 const store = useProtokollStore()
+const { silent } = useApi()
 const activeTab = ref<'events' | 'live'>('events')
 const bannedIps = ref<Set<string>>(new Set())
 
 async function fetchBannedIps() {
-  try {
-    const { data } = await api.get('/ip-bans')
-    bannedIps.value = new Set(data.filter((b: any) => b.is_active).map((b: any) => b.ip_address))
-  } catch {
-    // ignore
+  const data = await silent(() => api.get<IpBan[]>('/ip-bans'))
+  if (data !== null) {
+    bannedIps.value = new Set(data.filter((b) => b.is_active).map((b) => b.ip_address))
   }
 }
 

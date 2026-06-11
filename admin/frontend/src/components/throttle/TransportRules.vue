@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useToast } from 'primevue/usetoast'
 import type { TransportRule } from '../../stores/throttle'
 import { useThrottleStore } from '../../stores/throttle'
+import { useApi } from '../../composables/useApi'
 import TransportRuleForm from './TransportRuleForm.vue'
 import t from '../../i18n/de'
 
@@ -10,7 +10,7 @@ defineProps<{
   transports: TransportRule[]
 }>()
 
-const toast = useToast()
+const { call } = useApi()
 const store = useThrottleStore()
 const showForm = ref(false)
 const editingRule = ref<TransportRule | null>(null)
@@ -25,37 +25,38 @@ function openEdit(rule: TransportRule) {
   showForm.value = true
 }
 
-async function onSave(data: any) {
-  try {
-    if (editingRule.value) {
-      await store.updateTransport(editingRule.value.id, data)
-      toast.add({ severity: 'success', summary: t.common.success, detail: t.throttling.transportUpdated, life: 3000 })
-    } else {
-      await store.createTransport(data)
-      toast.add({ severity: 'success', summary: t.common.success, detail: t.throttling.transportCreated, life: 3000 })
-    }
-    showForm.value = false
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+async function onSave(data: Omit<TransportRule, 'id'>) {
+  const editing = editingRule.value
+  const ok = await call(
+    async () => {
+      if (editing) {
+        await store.updateTransport(editing.id, data)
+      } else {
+        await store.createTransport(data)
+      }
+      return { data: true }
+    },
+    { success: editing ? t.throttling.transportUpdated : t.throttling.transportCreated },
+  )
+  if (ok) showForm.value = false
 }
 
 async function onDelete(id: number) {
   if (!confirm(t.throttling.confirmDeleteTransport)) return
-  try {
-    await store.deleteTransport(id)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.throttling.transportDeleted, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  await call(
+    async () => {
+      await store.deleteTransport(id)
+      return { data: true }
+    },
+    { success: t.throttling.transportDeleted },
+  )
 }
 
 async function toggleActive(rule: TransportRule) {
-  try {
+  await call(async () => {
     await store.updateTransport(rule.id, { is_active: !rule.is_active })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+    return { data: true }
+  })
 }
 </script>
 

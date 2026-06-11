@@ -2,9 +2,42 @@
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import api from '../api/client'
+import { useApi } from '../composables/useApi'
 import t from '../i18n/de'
 
+interface DkimKeyInfo {
+  exists: boolean
+  dns_record: string
+  dns_name: string
+  selector: string
+}
+
+interface DnsRecordResult {
+  status: string
+  lookup_domain: string
+  record: string
+  details: string
+  suggested_record: string
+}
+
+interface DnsCheckResults {
+  hostname: string
+  ip: string
+  domain: string
+  check_time: string
+  spf: DnsRecordResult
+  dmarc: DnsRecordResult
+  dkim: DnsRecordResult
+}
+
+interface DnsCheckSettings {
+  dkim_selector: string | null
+  last_check_time: string | null
+  last_results: DnsCheckResults | null
+}
+
 const toast = useToast()
+const { call, silent } = useApi()
 
 const loading = ref(false)
 const checking = ref(false)
@@ -16,60 +49,51 @@ const domain = ref('')
 const dkimSelector = ref('')
 
 // DKIM key info
-const dkimKey = ref<{ exists: boolean; dns_record: string; dns_name: string; selector: string } | null>(null)
+const dkimKey = ref<DkimKeyInfo | null>(null)
 const deletingKey = ref(false)
 const confirmDelete = ref(false)
 const restartingMail = ref(false)
 
 // Results
-const results = ref<any>(null)
+const results = ref<DnsCheckResults | null>(null)
 const lastCheckTime = ref('')
 
 async function fetchDkimKey() {
-  try {
-    const { data } = await api.get('/dns-check/dkim-key')
+  const data = await silent(() => api.get<DkimKeyInfo>('/dns-check/dkim-key'))
+  if (data) {
     dkimKey.value = data
     if (data.selector && !dkimSelector.value) {
       dkimSelector.value = data.selector
     }
-  } catch {
-    // ignore
   }
 }
 
 async function deleteDkimKey() {
   deletingKey.value = true
-  try {
-    await api.delete('/dns-check/dkim-key')
+  const res = await call(() => api.delete('/dns-check/dkim-key'), { success: t.dns.dkimKeyDeleted })
+  if (res !== null) {
     dkimKey.value = null
     confirmDelete.value = false
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.dns.dkimKeyDeleted, life: 3000 })
     await fetchDkimKey()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    deletingKey.value = false
   }
+  deletingKey.value = false
 }
 
 async function restartMailContainer() {
   restartingMail.value = true
-  try {
-    const { data } = await api.post('/config/containers/open-mail-relay/restart')
+  const data = await call(() => api.post<{ message: string }>('/config/containers/open-mail-relay/restart'))
+  if (data !== null) {
     toast.add({ severity: 'success', summary: t.common.success, detail: data.message, life: 3000 })
     // Wait for container to come back and regenerate key
     setTimeout(fetchDkimKey, 5000)
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    restartingMail.value = false
   }
+  restartingMail.value = false
 }
 
 async function fetchSettings() {
   loading.value = true
   try {
-    const { data } = await api.get('/dns-check')
+    const { data } = await api.get<DnsCheckSettings>('/dns-check')
     dkimSelector.value = data.dkim_selector || ''
     lastCheckTime.value = data.last_check_time || ''
     results.value = data.last_results || null
@@ -85,19 +109,15 @@ async function fetchSettings() {
 
 async function runCheck() {
   checking.value = true
-  try {
-    const { data } = await api.post('/dns-check/check')
+  const data = await call(() => api.post<DnsCheckResults>('/dns-check/check'), { success: t.dns.checkComplete })
+  if (data !== null) {
     results.value = data
     lastCheckTime.value = data.check_time || ''
     hostname.value = data.hostname || ''
     serverIp.value = data.ip || ''
     domain.value = data.domain || ''
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.dns.checkComplete, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    checking.value = false
   }
+  checking.value = false
 }
 
 async function copyToClipboard(text: string) {
@@ -128,7 +148,7 @@ const formattedCheckTime = computed(() => {
 const issueCount = computed(() => {
   if (!results.value) return 0
   let count = 0
-  for (const key of ['spf', 'dmarc', 'dkim']) {
+  for (const key of ['spf', 'dmarc', 'dkim'] as const) {
     const r = results.value[key]
     if (r && r.status !== 'pass') count++
   }
@@ -178,10 +198,10 @@ function statusBadgeClass(status: string): string {
 
 const recordTypes = ['spf', 'dmarc', 'dkim'] as const
 function recordTitle(type: string): string {
-  return (t.dns as any)[type] || type.toUpperCase()
+  return (t.dns as Record<string, string>)[type] || type.toUpperCase()
 }
 function recordDesc(type: string): string {
-  return (t.dns as any)[type + 'Desc'] || ''
+  return (t.dns as Record<string, string>)[type + 'Desc'] || ''
 }
 
 onMounted(() => {

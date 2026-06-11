@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useToast } from 'primevue/usetoast'
 import api from '../../api/client'
+import { useApi } from '../../composables/useApi'
 import t from '../../i18n/de'
 
-const toast = useToast()
+const { call, silent } = useApi()
 
 interface PortalSettings {
   api_key: string
@@ -18,41 +18,30 @@ const saving = ref(false)
 const generating = ref(false)
 
 onMounted(async () => {
-  try {
-    const { data } = await api.get('/portal-settings')
-    settings.value = data
-  } catch {
-    // ignore
-  }
+  // Fehler bewusst ignoriert
+  settings.value = await silent(() => api.get<PortalSettings>('/portal-settings'))
 })
 
 async function save() {
   if (!settings.value) return
   saving.value = true
-  try {
-    const { data } = await api.put('/portal-settings', {
-      portal_allowed_ips: settings.value.allowed_ips,
-    })
-    settings.value = data
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.config.portalSettingsSaved, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    saving.value = false
-  }
+  const body = { portal_allowed_ips: settings.value.allowed_ips }
+  const data = await call(
+    () => api.put<PortalSettings>('/portal-settings', body),
+    { success: t.config.portalSettingsSaved },
+  )
+  if (data) settings.value = data
+  saving.value = false
 }
 
 async function generateKey() {
   generating.value = true
-  try {
-    const { data } = await api.post('/portal-settings/generate-key')
-    settings.value = data
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.config.portalKeyGenerated, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    generating.value = false
-  }
+  const data = await call(
+    () => api.post<PortalSettings>('/portal-settings/generate-key'),
+    { success: t.config.portalKeyGenerated },
+  )
+  if (data) settings.value = data
+  generating.value = false
 }
 
 </script>

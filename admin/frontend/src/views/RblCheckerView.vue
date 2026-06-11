@@ -2,11 +2,50 @@
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import api from '../api/client'
+import { useApi } from '../composables/useApi'
 import t from '../i18n/de'
 
 const toast = useToast()
+const { call, silent } = useApi()
 
-const settings = ref<any>({})
+interface RblSettings {
+  rbl_enabled?: string
+  rbl_check_interval_hours?: string
+  rbl_mail_to?: string
+  rbl_mail_from?: string
+  rbl_alert_on_change_only?: string
+  rbl_dns_timeout?: string
+  rbl_servers?: string
+  rbl_last_results?: string
+  rbl_last_check_time?: string
+}
+
+interface ServerInfo {
+  name?: string
+  ip?: string
+}
+
+interface RblListing {
+  rbl_name: string
+  rbl_zone: string
+  answer: string
+}
+
+interface RblServerResult {
+  name: string
+  ip: string
+  checked: number
+  listed_count: number
+  listings?: RblListing[]
+}
+
+interface RblCheckResult {
+  // lastResults wird nur gesetzt, wenn results vorhanden und nicht leer ist
+  results: RblServerResult[]
+  check_time?: string
+}
+
+const settings = ref<RblSettings>({})
 const loading = ref(false)
 const saving = ref(false)
 const checking = ref(false)
@@ -30,10 +69,10 @@ const newServerName = ref('')
 const newServerIp = ref('')
 
 // Results
-const lastResults = ref<any>(null)
+const lastResults = ref<RblCheckResult | null>(null)
 const lastCheckTime = ref('')
 
-function loadSettingsIntoForm(data: any) {
+function loadSettingsIntoForm(data: RblSettings) {
   enabled.value = data.rbl_enabled === 'true'
   intervalHours.value = parseInt(data.rbl_check_interval_hours || '6')
   mailTo.value = data.rbl_mail_to || ''
@@ -48,7 +87,7 @@ function loadSettingsIntoForm(data: any) {
   }
 
   try {
-    const results = JSON.parse(data.rbl_last_results || '{}')
+    const results = JSON.parse(data.rbl_last_results || '{}') as RblCheckResult
     lastResults.value = results.results && results.results.length > 0 ? results : null
   } catch {
     lastResults.value = null
@@ -58,77 +97,67 @@ function loadSettingsIntoForm(data: any) {
 }
 
 async function fetchServerInfo() {
-  try {
-    const { data } = await api.get('/rbl/server-info')
+  const data = await silent(() => api.get<ServerInfo>('/rbl/server-info'))
+  if (data !== null) {
     serverName.value = data.name || ''
     serverIp.value = data.ip || ''
-  } catch {
-    // ignore
   }
 }
 
 async function fetchSettings() {
   loading.value = true
-  try {
-    const { data } = await api.get('/rbl')
+  const data = await silent(() => api.get<RblSettings>('/rbl'))
+  if (data !== null) {
     settings.value = data
     loadSettingsIntoForm(data)
-  } finally {
-    loading.value = false
   }
+  loading.value = false
 }
 
 async function saveSettings() {
   saving.value = true
-  try {
-    const payload: any = {
-      rbl_enabled: enabled.value ? 'true' : 'false',
-      rbl_check_interval_hours: String(intervalHours.value),
-      rbl_mail_to: mailTo.value,
-      rbl_mail_from: mailFrom.value,
-      rbl_alert_on_change_only: alertOnChangeOnly.value ? 'true' : 'false',
-      rbl_dns_timeout: String(dnsTimeout.value),
-      rbl_servers: JSON.stringify(servers.value),
-    }
-    const { data } = await api.put('/rbl', payload)
+  const payload = {
+    rbl_enabled: enabled.value ? 'true' : 'false',
+    rbl_check_interval_hours: String(intervalHours.value),
+    rbl_mail_to: mailTo.value,
+    rbl_mail_from: mailFrom.value,
+    rbl_alert_on_change_only: alertOnChangeOnly.value ? 'true' : 'false',
+    rbl_dns_timeout: String(dnsTimeout.value),
+    rbl_servers: JSON.stringify(servers.value),
+  }
+  const data = await call(
+    () => api.put<RblSettings>('/rbl', payload),
+    { success: t.rbl.settingsSaved },
+  )
+  if (data !== null) {
     settings.value = data
     loadSettingsIntoForm(data)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.rbl.settingsSaved, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    saving.value = false
   }
+  saving.value = false
 }
 
 async function runCheck() {
   checking.value = true
-  try {
-    const { data } = await api.post('/rbl/check')
+  const data = await call(
+    () => api.post<RblCheckResult>('/rbl/check'),
+    { success: t.rbl.checkComplete },
+  )
+  if (data !== null) {
     lastResults.value = data.results && data.results.length > 0 ? data : null
     lastCheckTime.value = data.check_time || ''
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.rbl.checkComplete, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    checking.value = false
   }
+  checking.value = false
 }
 
 async function sendTestEmail() {
   sendingTest.value = true
-  try {
-    const { data } = await api.post('/rbl/test-email')
-    if (data.success) {
-      toast.add({ severity: 'success', summary: t.common.success, detail: t.rbl.testEmailSent, life: 3000 })
-    } else {
-      toast.add({ severity: 'error', summary: t.common.error, detail: t.rbl.testEmailFailed, life: 5000 })
-    }
-  } catch (e: any) {
+  const data = await silent(() => api.post<{ success: boolean }>('/rbl/test-email'))
+  if (data?.success) {
+    toast.add({ severity: 'success', summary: t.common.success, detail: t.rbl.testEmailSent, life: 3000 })
+  } else {
     toast.add({ severity: 'error', summary: t.common.error, detail: t.rbl.testEmailFailed, life: 5000 })
-  } finally {
-    sendingTest.value = false
   }
+  sendingTest.value = false
 }
 
 function addServer() {
@@ -159,7 +188,7 @@ const formattedCheckTime = computed(() => {
 
 const totalListings = computed(() => {
   if (!lastResults.value?.results) return 0
-  return lastResults.value.results.reduce((sum: number, r: any) => sum + (r.listed_count || 0), 0)
+  return lastResults.value.results.reduce((sum, r) => sum + (r.listed_count || 0), 0)
 })
 
 onMounted(() => {

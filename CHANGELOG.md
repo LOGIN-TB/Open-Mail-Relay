@@ -4,6 +4,18 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.8.0] - 2026-06-11
+
+### Geaendert (Code-Qualitaet, kein Funktionsunterschied)
+- **Backend-Robustheit** — Fehlgeschlagene Alembic-Migration bricht den Start jetzt ab statt still auf `create_all()` zurueckzufallen (verhindert halbmigrierte Schemata). Verschluckte Exceptions in Stats-Collector, Cert-Service und Log-WebSocket loggen jetzt volle Stacktraces.
+- **Portal-Auth gehaertet** — Settings werden 30 s gecacht statt pro Request per DB-Session geladen (Invalidierung bei Aenderung); `X-Forwarded-For` wird nur noch akzeptiert, wenn der direkte Peer privat ist (Caddy im Docker-Netz) — blockiert IP-Whitelist-Spoofing per Header; API-Key-Vergleich in konstanter Zeit; Brute-Force-Schutz: 30 Fehlversuche/60 s pro IP -> 429.
+- **portal_router aufgeteilt** — Die 800-Zeilen-Datei ist jetzt `portal_common.py` (Auth/Helfer), `portal_settings_router.py` (Admin-Endpoints) und `portal_router.py` (oeffentliche Endpoints). Routenliste vor/nach identisch verifiziert (111 Routen).
+- **Frontend: zentrales `useApi()`-Composable** — Die in ~20 Views/Komponenten duplizierten `try/catch`+Toast-Bloecke laufen jetzt ueber `composables/useApi.ts` (`call` mit Erfolgs-/Fehler-Toast, `silent` fuer Polling). Toast-Texte und Verhalten unveraendert.
+- **Frontend: Typisierung** — Neue `types/api.ts` (AdminUser, SmtpUser, IpBan, Network, MailEvent) plus lokale Interfaces ersetzen alle `: any`/`catch (e: any)` (0 verbleibend); `noUnusedLocals`/`noUnusedParameters` in tsconfig aktiviert.
+
+### Migrationshinweise (Server 2 / weitere Server)
+- `./scripts/update.sh` reicht; kein manueller Schritt. Browser einmal mit Strg+F5 neu laden.
+
 ## [2.7.3] - 2026-06-11
 
 ### Geaendert

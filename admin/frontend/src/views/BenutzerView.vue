@@ -1,24 +1,25 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import api from '../api/client'
+import { useApi } from '../composables/useApi'
 import UserList from '../components/users/UserList.vue'
 import UserForm from '../components/users/UserForm.vue'
 import t from '../i18n/de'
+import type { AdminUser } from '../types/api'
 
-const toast = useToast()
+const { call } = useApi()
 const confirm = useConfirm()
 
-const users = ref<any[]>([])
+const users = ref<AdminUser[]>([])
 const loading = ref(false)
 const showForm = ref(false)
-const editingUser = ref<any>(null)
+const editingUser = ref<AdminUser | null>(null)
 
 async function fetchUsers() {
   loading.value = true
   try {
-    const { data } = await api.get('/auth/users')
+    const { data } = await api.get<AdminUser[]>('/auth/users')
     users.value = data
   } finally {
     loading.value = false
@@ -30,27 +31,26 @@ function openCreate() {
   showForm.value = true
 }
 
-function openEdit(user: any) {
+function openEdit(user: AdminUser) {
   editingUser.value = user
   showForm.value = true
 }
 
 async function saveUser(data: { username?: string; password?: string; is_admin?: boolean }, userId?: number) {
-  try {
-    if (userId) {
-      await api.put(`/auth/users/${userId}`, { password: data.password || undefined, is_admin: data.is_admin })
-    } else {
-      await api.post('/auth/users', data)
-    }
-    toast.add({ severity: 'success', summary: t.common.success, detail: 'Benutzer gespeichert', life: 3000 })
+  const res = await call(
+    () =>
+      userId
+        ? api.put(`/auth/users/${userId}`, { password: data.password || undefined, is_admin: data.is_admin })
+        : api.post('/auth/users', data),
+    { success: 'Benutzer gespeichert' },
+  )
+  if (res !== null) {
     showForm.value = false
     await fetchUsers()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
   }
 }
 
-function confirmDelete(user: any) {
+function confirmDelete(user: AdminUser) {
   confirm.require({
     message: t.users.confirmDelete,
     header: t.users.delete,
@@ -61,12 +61,9 @@ function confirmDelete(user: any) {
 }
 
 async function deleteUser(userId: number) {
-  try {
-    await api.delete(`/auth/users/${userId}`)
-    toast.add({ severity: 'success', summary: t.common.success, detail: 'Benutzer geloescht', life: 3000 })
+  const res = await call(() => api.delete(`/auth/users/${userId}`), { success: 'Benutzer geloescht' })
+  if (res !== null) {
     await fetchUsers()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
   }
 }
 

@@ -2,10 +2,19 @@
 import { ref, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import api from '../../api/client'
+import { useApi } from '../../composables/useApi'
 import t from '../../i18n/de'
 
+interface ContainerInfo {
+  name: string
+  label: string
+  running: boolean
+  started_at: string | null
+}
+
 const toast = useToast()
-const containers = ref<any[]>([])
+const { call } = useApi()
+const containers = ref<ContainerInfo[]>([])
 const loading = ref(false)
 const restartingMap = ref<Record<string, boolean>>({})
 
@@ -24,7 +33,7 @@ const ICONS: Record<string, string> = {
 async function fetchContainers() {
   loading.value = true
   try {
-    const { data } = await api.get('/config/containers')
+    const { data } = await api.get<ContainerInfo[]>('/config/containers')
     containers.value = data
   } finally {
     loading.value = false
@@ -33,19 +42,16 @@ async function fetchContainers() {
 
 async function restartContainer(name: string) {
   restartingMap.value[name] = true
-  try {
-    const { data } = await api.post(`/config/containers/${name}/restart`)
+  const data = await call(() => api.post<{ message: string }>(`/config/containers/${name}/restart`))
+  if (data) {
     toast.add({ severity: 'success', summary: t.common.success, detail: data.message, life: 3000 })
     // Wait briefly for container to come back up
     setTimeout(fetchContainers, 3000)
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    restartingMap.value[name] = false
   }
+  restartingMap.value[name] = false
 }
 
-function formatTime(ts: string): string {
+function formatTime(ts: string | null): string {
   if (!ts) return '—'
   try {
     return new Date(ts).toLocaleString('de-DE')

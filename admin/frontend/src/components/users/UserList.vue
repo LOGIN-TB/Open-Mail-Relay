@@ -1,22 +1,17 @@
 <script setup lang="ts">
 import Button from 'primevue/button'
+import type { AdminUser } from '../../types/api'
 import t from '../../i18n/de'
 import { formatDateTimeShort } from '../../utils/dateFormat'
 
 defineProps<{
-  users: {
-    id: number
-    username: string
-    is_admin: boolean
-    created_at: string | null
-    last_login: string | null
-  }[]
+  users: AdminUser[]
   loading: boolean
 }>()
 
 const emit = defineEmits<{
-  edit: [user: any]
-  delete: [user: any]
+  edit: [user: AdminUser]
+  delete: [user: AdminUser]
 }>()
 
 function formatDate(ts: string | null): string {

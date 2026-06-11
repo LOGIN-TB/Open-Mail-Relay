@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useToast } from 'primevue/usetoast'
 import type { WarmupPhase, WarmupStatus } from '../../stores/throttle'
 import { useThrottleStore } from '../../stores/throttle'
+import { useApi } from '../../composables/useApi'
 import t from '../../i18n/de'
 
 defineProps<{
@@ -10,7 +10,7 @@ defineProps<{
   warmup: WarmupStatus | null
 }>()
 
-const toast = useToast()
+const { call } = useApi()
 const store = useThrottleStore()
 const editingId = ref<number | null>(null)
 const editData = ref<Partial<WarmupPhase>>({})
@@ -30,31 +30,34 @@ function cancelEdit() {
 }
 
 async function saveEdit(id: number) {
-  try {
-    await store.updatePhase(id, editData.value)
-    editingId.value = null
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.throttling.phaseUpdated, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  const ok = await call(
+    async () => {
+      await store.updatePhase(id, editData.value)
+      return { data: true }
+    },
+    { success: t.throttling.phaseUpdated },
+  )
+  if (ok) editingId.value = null
 }
 
 async function resetWarmup() {
-  try {
-    await store.resetWarmup()
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.throttling.warmupReset, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  await call(
+    async () => {
+      await store.resetWarmup()
+      return { data: true }
+    },
+    { success: t.throttling.warmupReset },
+  )
 }
 
 async function setPhase(phaseNumber: number) {
-  try {
-    await store.setWarmupPhase(phaseNumber)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.throttling.phaseSet, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  await call(
+    async () => {
+      await store.setWarmupPhase(phaseNumber)
+      return { data: true }
+    },
+    { success: t.throttling.phaseSet },
+  )
 }
 </script>
 

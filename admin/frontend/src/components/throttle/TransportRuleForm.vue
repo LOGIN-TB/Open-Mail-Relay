@@ -8,7 +8,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  save: [data: any]
+  save: [data: Omit<TransportRule, 'id'>]
   cancel: []
 }>()
 

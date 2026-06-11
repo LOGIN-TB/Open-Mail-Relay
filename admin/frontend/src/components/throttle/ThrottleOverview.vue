@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import type { ThrottleConfig, WarmupStatus, ThrottleMetrics } from '../../stores/throttle'
 import { useThrottleStore } from '../../stores/throttle'
+import { useApi } from '../../composables/useApi'
 import t from '../../i18n/de'
 
 defineProps<{
@@ -11,29 +12,39 @@ defineProps<{
   metrics: ThrottleMetrics | null
 }>()
 
+interface ToggleStep {
+  success: boolean
+}
+
+interface ToggleResult {
+  message: string
+  steps?: ToggleStep[]
+}
+
 const toast = useToast()
+const { call } = useApi()
 const store = useThrottleStore()
 const toggling = ref(false)
 
 async function toggleEnabled() {
   if (!store.config) return
   toggling.value = true
-  try {
-    const result = await store.updateConfig({ enabled: !store.config.enabled })
+  const result = await call<ToggleResult>(async () => {
+    const data: ToggleResult = await store.updateConfig({ enabled: !store.config!.enabled })
     await store.fetchAll()
+    return { data }
+  })
+  if (result) {
     const steps = result.steps || []
-    const allOk = steps.every((s: any) => s.success)
+    const allOk = steps.every((s) => s.success)
     toast.add({
       severity: allOk ? 'success' : 'warn',
       summary: t.common.success,
       detail: result.message,
       life: 5000,
     })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    toggling.value = false
   }
+  toggling.value = false
 }
 </script>
 

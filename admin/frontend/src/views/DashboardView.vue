@@ -2,53 +2,69 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useDashboardStore } from '../stores/dashboard'
 import api from '../api/client'
+import { useApi } from '../composables/useApi'
 import StatusOverview from '../components/dashboard/StatusOverview.vue'
 import StatsCards from '../components/dashboard/StatsCards.vue'
 import DeliveryChart from '../components/dashboard/DeliveryChart.vue'
 import QueueStatus from '../components/dashboard/QueueStatus.vue'
 import RecentActivity from '../components/dashboard/RecentActivity.vue'
 import t from '../i18n/de'
+import type { IpBan } from '../types/api'
+
+interface RblStatus {
+  enabled: boolean
+  last_check_time: string
+  total_listings: number
+  all_clean: boolean
+}
+
+interface DnsStatusSummary {
+  checked: boolean
+  all_ok: boolean
+  issues: number
+  last_check_time: string
+}
+
+interface ProviderBlockStatus {
+  enabled: boolean
+  last_scan_time: string
+  active_count: number
+  all_clear: boolean
+}
 
 const dashboard = useDashboardStore()
+const { silent } = useApi()
 const bannedIps = ref<Set<string>>(new Set())
-const rblStatus = ref<{ enabled: boolean; last_check_time: string; total_listings: number; all_clean: boolean } | null>(null)
-const dnsStatus = ref<{ checked: boolean; all_ok: boolean; issues: number; last_check_time: string } | null>(null)
-const providerBlockStatus = ref<{ enabled: boolean; last_scan_time: string; active_count: number; all_clear: boolean } | null>(null)
+const rblStatus = ref<RblStatus | null>(null)
+const dnsStatus = ref<DnsStatusSummary | null>(null)
+const providerBlockStatus = ref<ProviderBlockStatus | null>(null)
 const statusOverview = ref<InstanceType<typeof StatusOverview> | null>(null)
 
 async function fetchBannedIps() {
-  try {
-    const { data } = await api.get('/ip-bans')
-    bannedIps.value = new Set(data.filter((b: any) => b.is_active).map((b: any) => b.ip_address))
-  } catch {
-    // ignore
+  const data = await silent(() => api.get<IpBan[]>('/ip-bans'))
+  if (data) {
+    bannedIps.value = new Set(data.filter((b) => b.is_active).map((b) => b.ip_address))
   }
 }
 
 async function fetchRblStatus() {
-  try {
-    const { data } = await api.get('/rbl/status')
+  const data = await silent(() => api.get<RblStatus>('/rbl/status'))
+  if (data) {
     rblStatus.value = data
-  } catch {
-    // ignore
   }
 }
 
 async function fetchDnsStatus() {
-  try {
-    const { data } = await api.get('/dns-check/status')
+  const data = await silent(() => api.get<DnsStatusSummary>('/dns-check/status'))
+  if (data) {
     dnsStatus.value = data
-  } catch {
-    // ignore
   }
 }
 
 async function fetchProviderBlockStatus() {
-  try {
-    const { data } = await api.get('/provider-blocks/status')
+  const data = await silent(() => api.get<ProviderBlockStatus>('/provider-blocks/status'))
+  if (data) {
     providerBlockStatus.value = data
-  } catch {
-    // ignore
   }
 }
 

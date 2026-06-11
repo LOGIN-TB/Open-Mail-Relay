@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import api from '../api/client'
+import { useApi } from '../composables/useApi'
 import PackageList from '../components/billing/PackageList.vue'
 import PackageForm from '../components/billing/PackageForm.vue'
 import BillingOverview from '../components/billing/BillingOverview.vue'
@@ -12,7 +12,14 @@ import t from '../i18n/de'
 import type { PackageItem } from '../components/billing/PackageList.vue'
 import type { BillingData } from '../components/billing/BillingOverview.vue'
 
-const toast = useToast()
+interface BillingSettingsData {
+  billing_report_email: string | null
+  billing_report_from: string | null
+  usage_report_enabled: boolean | null
+  usage_report_day: string | null
+}
+
+const { call, silent } = useApi()
 const confirm = useConfirm()
 
 const packages = ref<PackageItem[]>([])
@@ -57,23 +64,17 @@ async function fetchPackages() {
 }
 
 async function createPackage(payload: { name: string; category: string; monthly_limit: number; description: string }) {
-  try {
-    await api.post('/billing/packages', payload)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.billing.packageCreated, life: 3000 })
+  const res = await call(() => api.post('/billing/packages', payload), { success: t.billing.packageCreated })
+  if (res !== null) {
     showPackageForm.value = false
     await fetchPackages()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
   }
 }
 
 async function updatePackageField(packageId: number, field: string, value: string | number) {
-  try {
-    await api.put(`/billing/packages/${packageId}`, { [field]: value })
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.billing.packageUpdated, life: 3000 })
+  const res = await call(() => api.put(`/billing/packages/${packageId}`, { [field]: value }), { success: t.billing.packageUpdated })
+  if (res !== null) {
     await fetchPackages()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
   }
 }
 
@@ -88,12 +89,9 @@ function confirmDeletePackage(pkg: PackageItem) {
 }
 
 async function deletePackage(packageId: number) {
-  try {
-    await api.delete(`/billing/packages/${packageId}`)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.billing.packageDeleted, life: 3000 })
+  const res = await call(() => api.delete(`/billing/packages/${packageId}`), { success: t.billing.packageDeleted })
+  if (res !== null) {
     await fetchPackages()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
   }
 }
 
@@ -111,46 +109,39 @@ async function fetchBilling() {
 
 async function refreshBilling() {
   loadingBilling.value = true
-  try {
-    await api.post(`/billing/overview/refresh?year_month=${selectedMonth.value}`)
+  const res = await call(() => api.post(`/billing/overview/refresh?year_month=${selectedMonth.value}`))
+  if (res !== null) {
     await fetchBilling()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
+  } else {
     loadingBilling.value = false
   }
 }
 
 async function sendReport() {
   sendingReport.value = true
-  try {
-    await api.post(`/billing/report/${selectedMonth.value}/send`)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.billing.reportSent, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? t.billing.reportFailed, life: 5000 })
-  } finally {
-    sendingReport.value = false
-  }
+  await call(() => api.post(`/billing/report/${selectedMonth.value}/send`), {
+    success: t.billing.reportSent,
+    error: t.billing.reportFailed,
+  })
+  sendingReport.value = false
 }
 
 // --- Settings ---
 
 async function fetchSettings() {
-  try {
-    const { data } = await api.get('/billing/settings')
+  const data = await silent(() => api.get<BillingSettingsData>('/billing/settings'))
+  if (data) {
     reportEmail.value = data.billing_report_email || ''
     reportFrom.value = data.billing_report_from || ''
     usageReportEnabled.value = data.usage_report_enabled ?? true
     usageReportDay.value = data.usage_report_day || 'monday'
-  } catch { /* ignore */ }
+  }
 }
 
 async function saveSettings(payload: { billing_report_email: string; billing_report_from: string; usage_report_enabled: boolean; usage_report_day: string }) {
-  try {
-    await api.put('/billing/settings', payload)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.billing.settingsSaved, life: 3000 })
+  const res = await call(() => api.put('/billing/settings', payload), { success: t.billing.settingsSaved })
+  if (res !== null) {
     await fetchSettings()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
   }
 }
 

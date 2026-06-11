@@ -1,51 +1,41 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import api from '../api/client'
+import { useApi } from '../composables/useApi'
 import NetworkList from '../components/networks/NetworkList.vue'
 import NetworkForm from '../components/networks/NetworkForm.vue'
 import t from '../i18n/de'
 
-import type { NetworkItem } from '../components/networks/NetworkList.vue'
+import type { Network } from '../types/api'
 
-const toast = useToast()
+const { call, silent } = useApi()
 const confirm = useConfirm()
 
-const networks = ref<NetworkItem[]>([])
+const networks = ref<Network[]>([])
 const loading = ref(false)
 
 async function fetchNetworks() {
   loading.value = true
-  try {
-    const { data } = await api.get('/networks')
-    networks.value = data
-  } finally {
-    loading.value = false
-  }
+  const data = await silent(() => api.get<Network[]>('/networks'))
+  if (data !== null) networks.value = data
+  loading.value = false
 }
 
 async function addNetwork(payload: { cidr: string; owner: string }) {
-  try {
-    await api.post('/networks', payload)
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.networks.networkAdded, life: 3000 })
-    await fetchNetworks()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  const result = await call(() => api.post<Network>('/networks', payload), { success: t.networks.networkAdded })
+  if (result !== null) await fetchNetworks()
 }
 
 async function updateField(networkId: number, field: string, value: string) {
-  try {
-    await api.put(`/networks/${networkId}`, { [field]: value })
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.networks.networkUpdated, life: 3000 })
-    await fetchNetworks()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+  const result = await call(
+    () => api.put<Network>(`/networks/${networkId}`, { [field]: value }),
+    { success: t.networks.networkUpdated },
+  )
+  if (result !== null) await fetchNetworks()
 }
 
-function confirmRemove(network: NetworkItem) {
+function confirmRemove(network: Network) {
   confirm.require({
     message: t.networks.confirmRemove,
     header: t.networks.remove,
@@ -55,14 +45,12 @@ function confirmRemove(network: NetworkItem) {
   })
 }
 
-async function removeNetwork(network: NetworkItem) {
-  try {
-    await api.delete(`/networks/${network.id}`)
-    toast.add({ severity: 'success', summary: t.common.success, detail: `Netzwerk ${network.cidr} entfernt`, life: 3000 })
-    await fetchNetworks()
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  }
+async function removeNetwork(network: Network) {
+  const result = await call(
+    () => api.delete<void>(`/networks/${network.id}`),
+    { success: `Netzwerk ${network.cidr} entfernt` },
+  )
+  if (result !== null) await fetchNetworks()
 }
 
 onMounted(fetchNetworks)

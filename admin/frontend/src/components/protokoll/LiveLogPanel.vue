@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import t from '../../i18n/de'
 
 const lines = ref<string[]>([])

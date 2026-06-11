@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useToast } from 'primevue/usetoast'
 import type { ThrottleConfig } from '../../stores/throttle'
 import { useThrottleStore } from '../../stores/throttle'
+import { useApi } from '../../composables/useApi'
 import t from '../../i18n/de'
 
 const props = defineProps<{
   config: ThrottleConfig | null
 }>()
 
-const toast = useToast()
+const { call } = useApi()
 const store = useThrottleStore()
 const batchInterval = ref(10)
 const saving = ref(false)
@@ -22,14 +22,14 @@ watch(() => props.config, (cfg) => {
 
 async function save() {
   saving.value = true
-  try {
-    await store.updateConfig({ batch_interval_minutes: batchInterval.value })
-    toast.add({ severity: 'success', summary: t.common.success, detail: t.throttling.settingsSaved, life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: t.common.error, detail: e.response?.data?.detail ?? 'Fehler', life: 5000 })
-  } finally {
-    saving.value = false
-  }
+  await call(
+    async () => {
+      await store.updateConfig({ batch_interval_minutes: batchInterval.value })
+      return { data: true }
+    },
+    { success: t.throttling.settingsSaved },
+  )
+  saving.value = false
 }
 </script>
 

@@ -93,7 +93,7 @@ function save() {
 
   if (!isEdit.value && !username.value.trim()) return
 
-  const payload: any = {
+  const payload = {
     company: company.value.trim() || null,
     service: service.value.trim() || null,
     mail_domain: mailDomain.value.trim() || null,
@@ -103,12 +103,10 @@ function save() {
   }
 
   if (isEdit.value) {
-    payload.id = props.user!.id
+    emit('save', { ...payload, id: props.user!.id })
   } else {
-    payload.username = username.value.trim().toLowerCase()
+    emit('save', { ...payload, username: username.value.trim().toLowerCase() })
   }
-
-  emit('save', payload)
 }
 </script>
 
