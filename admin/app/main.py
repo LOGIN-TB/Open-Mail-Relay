@@ -23,7 +23,8 @@ from app.routers import provider_block_router
 from app.routers import dns_check_router
 from app.routers import billing_router
 from app.routers import portal_router
-from app.routers.portal_router import portal_auth_middleware, settings_router as portal_settings_router
+from app.routers.portal_common import portal_auth_middleware
+from app.routers.portal_settings_router import settings_router as portal_settings_router
 from app.services.stats_collector import StatsCollector
 from app.services.sasl_service import sync_dovecot_users
 from app.services.policy_server import PolicyServer

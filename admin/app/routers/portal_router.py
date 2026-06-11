@@ -1,35 +1,31 @@
 """Portal API — readonly endpoints for external customer portal (my.spamgo.de).
 
-All endpoints require IP-whitelist + API-key authentication via middleware.
-The only write endpoint is password reset.
-Settings (API key, allowed IPs) are managed via the admin UI and stored in SystemSetting.
+All endpoints require IP-whitelist + API-key authentication via middleware
+(see app.routers.portal_common). The only write endpoint is password reset.
+Settings (API key, allowed IPs) are managed via the admin UI and stored in
+SystemSetting (see app.routers.portal_settings_router).
 """
 
 import csv
 import io
-import ipaddress
 import json
 import logging
-import secrets
-import time
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.config import settings as app_settings
-from app.database import get_db, SessionLocal
-from app.dependencies import require_admin
-from app.models import SmtpUser, MailEvent, Package, SystemSetting, AuditLog, User
+from app.database import get_db
+from app.models import SmtpUser, MailEvent, Package
+from app.routers.portal_common import _get_hostname
 from app.services.crypto_service import generate_smtp_password, encrypt_password, decrypt_password
 from app.services.dns_check_service import (
     check_spf, check_dmarc, check_dkim, get_dkim_selector,
     get_server_info as dns_get_server_info,
 )
 from app.services.pdf_service import generate_config_pdf
-from app.services.postfix_service import read_main_cf
 from app.services.rbl_service import (
     get_rbl_status as rbl_get_status,
     get_server_info as rbl_get_server_info,
@@ -43,136 +39,12 @@ logger = logging.getLogger(__name__)
 
 VERSION = "2.4.1"
 
-PORTAL_DEFAULTS = {
-    "portal_api_key": "",
-    "portal_allowed_ips": "",
-}
-
-
-# ---------------------------------------------------------------------------
-# Settings helpers (SystemSetting-backed)
-# ---------------------------------------------------------------------------
-
-def _get_portal_setting(db: Session, key: str) -> str:
-    row = db.query(SystemSetting).filter(SystemSetting.key == key).first()
-    return row.value if row else PORTAL_DEFAULTS.get(key, "")
-
-
-def _set_portal_setting(db: Session, key: str, value: str) -> None:
-    row = db.query(SystemSetting).filter(SystemSetting.key == key).first()
-    if row:
-        row.value = value
-    else:
-        db.add(SystemSetting(key=key, value=value))
-    _invalidate_portal_settings_cache()
-
-
-# ---------------------------------------------------------------------------
-# Auth middleware
-# ---------------------------------------------------------------------------
-
-# Settings cache: avoid a DB session + two queries on every portal request.
-_PORTAL_SETTINGS_CACHE_TTL = 30  # seconds
-_portal_settings_cache: tuple[float, str, str] | None = None  # (expires, key, ips)
-
-# Brute-force guard: failed auth attempts per client IP (sliding window)
-_PORTAL_FAIL_WINDOW = 60  # seconds
-_PORTAL_FAIL_LIMIT = 30
-_portal_failed_auth: dict[str, list[float]] = {}
-
-
-def _invalidate_portal_settings_cache() -> None:
-    global _portal_settings_cache
-    _portal_settings_cache = None
-
-
-def _get_cached_portal_auth() -> tuple[str, str]:
-    """Return (api_key, allowed_ips_raw), cached with a short TTL."""
-    global _portal_settings_cache
-    now = time.monotonic()
-    if _portal_settings_cache and _portal_settings_cache[0] > now:
-        return _portal_settings_cache[1], _portal_settings_cache[2]
-    db = SessionLocal()
-    try:
-        api_key = _get_portal_setting(db, "portal_api_key")
-        allowed_ips = _get_portal_setting(db, "portal_allowed_ips")
-    finally:
-        db.close()
-    _portal_settings_cache = (now + _PORTAL_SETTINGS_CACHE_TTL, api_key, allowed_ips)
-    return api_key, allowed_ips
-
-
-def _portal_client_ip(request: Request) -> str:
-    """Determine the real client IP.
-
-    Only trust X-Forwarded-For when the direct peer is a private address
-    (i.e. the Caddy reverse proxy on the Docker network) — otherwise a
-    direct caller could spoof a whitelisted IP via the header.
-    """
-    peer_ip = request.client.host if request.client else ""
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        try:
-            if ipaddress.ip_address(peer_ip).is_private:
-                return forwarded_for.split(",")[0].strip()
-        except ValueError:
-            pass
-    return peer_ip
-
-
-def _portal_too_many_failures(client_ip: str) -> bool:
-    now = time.monotonic()
-    attempts = [t for t in _portal_failed_auth.get(client_ip, []) if now - t < _PORTAL_FAIL_WINDOW]
-    _portal_failed_auth[client_ip] = attempts
-    return len(attempts) >= _PORTAL_FAIL_LIMIT
-
-
-def _portal_record_failure(client_ip: str) -> None:
-    _portal_failed_auth.setdefault(client_ip, []).append(time.monotonic())
-
-
-async def portal_auth_middleware(request: Request, call_next):
-    if request.url.path.startswith("/api/portal"):
-        # Skip auth for the admin settings endpoints
-        if request.url.path.startswith("/api/portal-settings"):
-            return await call_next(request)
-
-        try:
-            api_key_db, allowed_ips_raw = _get_cached_portal_auth()
-        except Exception:
-            logger.exception("Portal auth: failed to load settings")
-            return JSONResponse(status_code=403, content={"detail": "Forbidden"})
-
-        allowed_ips = set(
-            ip.strip() for ip in allowed_ips_raw.split(",") if ip.strip()
-        )
-
-        client_ip = _portal_client_ip(request)
-        if _portal_too_many_failures(client_ip):
-            return JSONResponse(status_code=429, content={"detail": "Too many requests"})
-
-        api_key = request.headers.get("X-Portal-API-Key", "")
-
-        ip_ok = bool(allowed_ips) and client_ip in allowed_ips
-        key_ok = bool(api_key_db) and secrets.compare_digest(api_key, api_key_db)
-        if not (ip_ok and key_ok):
-            _portal_record_failure(client_ip)
-            return JSONResponse(status_code=403, content={"detail": "Forbidden"})
-
-    return await call_next(request)
-
 
 # ---------------------------------------------------------------------------
 # Portal API Router (external portal endpoints)
 # ---------------------------------------------------------------------------
 
 router = APIRouter()
-
-
-def _get_hostname() -> str:
-    """Read myhostname from Postfix config."""
-    cf = read_main_cf()
-    return cf.get("myhostname", "unknown")
 
 
 # ---------------------------------------------------------------------------
@@ -720,74 +592,3 @@ def portal_user_bounces(
         "per_page": per_page,
         "pages": pages,
     }
-
-
-# ---------------------------------------------------------------------------
-# Admin Settings Router (auth-protected, for admin UI)
-# ---------------------------------------------------------------------------
-
-settings_router = APIRouter()
-
-
-@settings_router.get("")
-def get_portal_settings(
-    admin: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    api_key = _get_portal_setting(db, "portal_api_key")
-    allowed_ips = _get_portal_setting(db, "portal_allowed_ips")
-
-    # Build copyable config block
-    admin_hostname = app_settings.ADMIN_HOSTNAME
-    relay_hostname = _get_hostname()
-    api_url = f"https://{admin_hostname}/api/portal" if admin_hostname else ""
-
-    return {
-        "api_key": api_key,
-        "allowed_ips": allowed_ips,
-        "api_url": api_url,
-        "server_hostname": relay_hostname,
-    }
-
-
-@settings_router.put("")
-def update_portal_settings(
-    request: Request,
-    body: dict,
-    admin: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    allowed_keys = {"portal_allowed_ips"}
-    for key, value in body.items():
-        if key in allowed_keys:
-            _set_portal_setting(db, key, str(value))
-
-    db.add(AuditLog(
-        user_id=admin.id,
-        action="portal_settings_updated",
-        details="Portal-API Einstellungen aktualisiert",
-        ip_address=request.client.host if request.client else None,
-    ))
-    db.commit()
-
-    return get_portal_settings(admin=admin, db=db)
-
-
-@settings_router.post("/generate-key")
-def generate_portal_key(
-    request: Request,
-    admin: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    new_key = secrets.token_hex(32)
-    _set_portal_setting(db, "portal_api_key", new_key)
-
-    db.add(AuditLog(
-        user_id=admin.id,
-        action="portal_api_key_generated",
-        details="Neuer Portal-API-Schluessel generiert",
-        ip_address=request.client.host if request.client else None,
-    ))
-    db.commit()
-
-    return get_portal_settings(admin=admin, db=db)
