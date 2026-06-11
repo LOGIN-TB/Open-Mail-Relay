@@ -4,6 +4,30 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.7.1] - 2026-06-11
+
+### Sicherheit
+- **JWT-Bibliothek getauscht: python-jose -> PyJWT** — `python-jose` 3.3.0 hat bekannte Schwachstellen (CVE-2024-33663 Algorithm-Confusion, CVE-2024-33664 JWE-DoS) und wird kaum noch gepflegt. Die Token-Erstellung/-Pruefung (`auth.py`) laeuft jetzt ueber das aktiv gepflegte `PyJWT` 2.13. Gleicher Algorithmus (HS256), gleicher Secret — **bestehende Sessions bleiben gueltig**.
+- **CORS eingeschraenkt** — Bisher `allow_origins=["*"]` zusammen mit `allow_credentials=True` (CSRF-Risiko). Jetzt sind nur noch `https://<ADMIN_HOSTNAME>` und der Vite-Dev-Server (`http://localhost:5173`) erlaubt. Die SPA selbst wird same-origin ausgeliefert und braucht kein CORS.
+- **Firewall-Service validiert IPs** — `block_ip`/`unblock_ip`/`sync_bans` pruefen Eingaben jetzt mit `ipaddress` und kanonisieren sie, bevor sie in den `ipset`-Befehl im Firewall-Container interpoliert werden (Defense-in-Depth gegen Command-Injection; bisher schuetzte nur der Schema-Validator am API-Rand).
+- **Warnung bei schwachem ADMIN_SECRET_KEY** — Beim Start wird geprueft, ob der Default (`change-me-in-production`) aktiv oder der Key kuerzer als 32 Zeichen ist; dann erscheint eine deutliche Warnung im Log. Aus dem Secret wird auch der Fernet-Schluessel fuer die SMTP-Passwoerter abgeleitet — deshalb gibt es fuer den Wechsel ein Rotations-Tool (siehe unten).
+
+### Hinzugefuegt
+- **Rotations-Tool fuer ADMIN_SECRET_KEY** (`app/tools/rotate_secret_key.py`) — verschluesselt alle gespeicherten SMTP-Passwoerter vom alten auf den neuen Key um. Ohne dieses Tool waeren die Passwoerter nach einem Key-Wechsel unlesbar. Anwendung: `docker exec -it open-mail-relay-admin python -m app.tools.rotate_secret_key '<ALT>' '<NEU>'`, danach `.env` anpassen und `docker compose up -d admin-panel`. Admin-Sessions werden dabei invalidiert (erneuter Login), SMTP-Versand laeuft unterbrechungsfrei weiter.
+- **Update-Skript `scripts/update.sh`** — einheitlicher Update-Weg fuer alle Server: `git pull --ff-only` + `docker compose build` + `up -d`. Laufzeit-Dateien bleiben unangetastet, Alembic-Migrationen laufen automatisch beim Start.
+
+### Geaendert
+- **`postfix/client_access` aus Git entfernt** — Die Datei wird zur Laufzeit aus der DB generiert (und vom Entrypoint angelegt, falls sie fehlt). Als getrackte Datei blockierte sie auf jedem Server mit lokalen Sperren das `git pull`. Sie war bereits in `.gitignore` gelistet, aber noch aus der Anfangszeit getrackt.
+
+### Migrationshinweise (Server 2 / weitere Server)
+1. `./scripts/update.sh` (oder manuell: `git pull --ff-only && docker compose build && docker compose up -d`). Falls `git pull` wegen lokaler `postfix/client_access`-Aenderungen scheitert: `git checkout -- postfix/client_access` (Datei wird beim naechsten Panel-Start aus der DB neu generiert) und erneut pullen.
+2. Optional, aber empfohlen: `ADMIN_SECRET_KEY` rotieren, falls er schwach ist (siehe Rotations-Tool oben). Neuen Key erzeugen mit `openssl rand -hex 32`.
+
+## [2.7.0] - 2026-06-11
+
+### Hinzugefuegt
+- **Provider-Sperren-Monitoring** — Neue Ansicht „Provider-Sperren": erkennt provider-interne Versandsperren (z. B. Outlook-/Gmail-spezifische Ablehnungscodes) aus den Mail-Logs, gruppiert sie nach Fehlertyp und zeigt fehlertyp-spezifische Delisting-Anleitungen samt Status-Tracking an (`provider_block_service/worker/router`, Migration 015, Dashboard-Integration). *(Eintrag nachgetragen.)*
+
 ## [2.6.0] - 2026-06-03
 
 ### Hinzugefuegt

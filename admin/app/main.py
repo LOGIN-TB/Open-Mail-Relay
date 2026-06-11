@@ -123,6 +123,20 @@ async def lifespan(app: FastAPI):
         if name.startswith("app."):
             lg = logging.getLogger(name)
             lg.disabled = False
+
+    # Warn loudly about weak JWT/encryption secrets (also derives the Fernet
+    # key for SMTP user passwords — see app/services/crypto_service.py).
+    # Rotate with: python -m app.tools.rotate_secret_key <OLD> <NEW>
+    if settings.SECRET_KEY == "change-me-in-production":
+        logger.critical(
+            "ADMIN_SECRET_KEY is not set — using the insecure default! "
+            "Set a random value (openssl rand -hex 32) in .env."
+        )
+    elif len(settings.SECRET_KEY) < 32:
+        logger.warning(
+            "ADMIN_SECRET_KEY is shorter than 32 characters — consider rotating "
+            "to a stronger key via: python -m app.tools.rotate_secret_key"
+        )
     create_default_admin()
 
     # Sync Dovecot users from DB (regenerate passwd-file on every start)
@@ -294,9 +308,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# The SPA is served same-origin by this app; CORS is only needed for the
+# Vite dev server. Never combine a wildcard origin with credentials.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        f"https://{settings.ADMIN_HOSTNAME}",
+        "http://localhost:5173",  # Vite dev server
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

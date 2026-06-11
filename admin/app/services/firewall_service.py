@@ -3,6 +3,7 @@
 Uses an ipset (omr-banned) + a single iptables rule in the DOCKER-USER chain
 to drop packets from banned IPs before they reach the mail container.
 """
+import ipaddress
 import logging
 
 from docker.errors import APIError, NotFound
@@ -35,9 +36,25 @@ def _exec_firewall(command: str) -> tuple[int, str]:
         return 1, str(e)
 
 
+def _validate_ip(ip_address: str) -> str | None:
+    """Return the canonical form of a valid IP address, or None.
+
+    Defense-in-depth: values are interpolated into a shell command inside the
+    firewall container, so never pass anything that is not a plain IP.
+    """
+    try:
+        return str(ipaddress.ip_address(ip_address.strip()))
+    except ValueError:
+        logger.error(f"Firewall: rejected invalid IP address: {ip_address!r}")
+        return None
+
+
 def block_ip(ip_address: str) -> bool:
     """Add an IP to the firewall blocklist (ipset)."""
-    code, output = _exec_firewall(f"ipset add omr-banned {ip_address} -exist")
+    ip = _validate_ip(ip_address)
+    if ip is None:
+        return False
+    code, output = _exec_firewall(f"ipset add omr-banned {ip} -exist")
     if code == 0:
         logger.info(f"Firewall: blocked {ip_address}")
         return True
@@ -47,7 +64,10 @@ def block_ip(ip_address: str) -> bool:
 
 def unblock_ip(ip_address: str) -> bool:
     """Remove an IP from the firewall blocklist (ipset)."""
-    code, output = _exec_firewall(f"ipset del omr-banned {ip_address} -exist")
+    ip = _validate_ip(ip_address)
+    if ip is None:
+        return False
+    code, output = _exec_firewall(f"ipset del omr-banned {ip} -exist")
     if code == 0:
         logger.info(f"Firewall: unblocked {ip_address}")
         return True
@@ -62,8 +82,13 @@ def sync_bans(ip_addresses: list[str]) -> bool:
         logger.error(f"Firewall: failed to flush ipset: {output}")
         return False
 
-    for ip in ip_addresses:
+    synced = 0
+    for ip_address in ip_addresses:
+        ip = _validate_ip(ip_address)
+        if ip is None:
+            continue
         _exec_firewall(f"ipset add omr-banned {ip} -exist")
+        synced += 1
 
-    logger.info(f"Firewall: synced {len(ip_addresses)} banned IPs")
+    logger.info(f"Firewall: synced {synced} banned IPs")
     return True
