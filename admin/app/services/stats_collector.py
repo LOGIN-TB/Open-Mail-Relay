@@ -88,9 +88,9 @@ class StatsCollector:
                     break
 
                 await asyncio.sleep(0.2)
-        except Exception as e:
+        except Exception:
             if self._running:
-                logger.error(f"Log processing error: {e}")
+                logger.exception("Log processing error")
 
         # Wait for reader thread to finish
         try:
@@ -175,8 +175,8 @@ class StatsCollector:
                 self._record_ban_failure(event.client_ip, "sasl_auth_failed")
 
             self._cleanup_old_events(db)
-        except Exception as e:
-            logger.error(f"Error storing event: {e}")
+        except Exception:
+            logger.exception("Error storing event")
             db.rollback()
         finally:
             db.close()

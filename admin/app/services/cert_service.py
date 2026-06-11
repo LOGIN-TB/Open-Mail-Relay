@@ -87,8 +87,8 @@ def _read_cert_info(cert_file: Path) -> dict:
             if line.startswith("issuer="):
                 info["issuer"] = line.split("=", 1)[1].strip()
         return info
-    except Exception as e:
-        logger.error(f"Error reading certificate: {e}")
+    except Exception:
+        logger.exception("Error reading certificate")
         return {}
 
 

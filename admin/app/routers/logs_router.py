@@ -182,8 +182,8 @@ async def log_stream(websocket: WebSocket, token: str = Query(...)):
                     break
     except WebSocketDisconnect:
         pass
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+    except Exception:
+        logger.exception("WebSocket error")
         try:
             await websocket.close()
         except Exception:

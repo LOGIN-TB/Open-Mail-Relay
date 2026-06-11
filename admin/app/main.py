@@ -102,11 +102,16 @@ def run_migrations():
 async def lifespan(app: FastAPI):
     # Startup — run Alembic migrations (must happen before logging setup
     # because Alembic's fileConfig can reconfigure loggers)
+    # A failed migration must abort startup: silently falling back to
+    # create_all() can leave a half-migrated schema and corrupt data.
     try:
         run_migrations()
-    except Exception as e:
-        logging.warning(f"Alembic migration failed, falling back to create_all: {e}")
-        Base.metadata.create_all(bind=engine)
+    except Exception:
+        logging.exception(
+            "Alembic migration failed — refusing to start with an "
+            "inconsistent schema. Fix the migration state and restart."
+        )
+        raise
 
     # Configure app-level logging AFTER Alembic migrations
     # (Alembic's fileConfig may reconfigure the logging hierarchy)
