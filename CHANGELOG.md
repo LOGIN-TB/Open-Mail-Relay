@@ -4,6 +4,14 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [2.7.3] - 2026-06-11
+
+### Geaendert
+- **Frontend-Toolchain aktualisiert** — Vite 6 -> 8, TypeScript 5.7 -> 6.0, vue-tsc 2 -> 3.3, @vitejs/plugin-vue 5 -> 6, vue-router 4 -> 5, Pinia 2 -> 3, PrimeVue 4.3 -> 4.5, Vue 3.5.38, axios 1.17, chart.js 4.5. Keine Code-Aenderungen noetig (Standard-APIs, Composition API durchgaengig); Type-Check und Build laufen sauber durch. `package-lock.json` neu generiert (Node 22 / npm 10).
+
+### Migrationshinweise (Server 2 / weitere Server)
+- `./scripts/update.sh` reicht. Nach dem Update einmal das Admin-Panel im Browser neu laden (Strg+F5), damit die neuen Assets gezogen werden.
+
 ## [2.7.2] - 2026-06-11
 
 ### Geaendert
