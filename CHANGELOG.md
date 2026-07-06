@@ -4,6 +4,11 @@ Alle relevanten Aenderungen an diesem Projekt werden in dieser Datei dokumentier
 
 Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [Unreleased]
+
+### Hinzugefuegt
+- **Portal-API: Kontingent pro Account** — `GET /api/portal/stats/{id}` und `/api/portal/smtp-users/{username}/stats` liefern jetzt ein `quota`-Objekt (Paketname, Kategorie, Monatslimit, Verbrauch im laufenden Monat, verbleibend, Overage) statt `null`, sofern dem SMTP-Benutzer ein Paket zugeordnet ist. Verbrauch wird live aus `mail_events` gezaehlt (deckt sich mit der Abrechnung). Ermoeglicht die monatliche Budget-Anzeige im Kundenportal.
+
 ## [2.8.1] - 2026-06-11
 
 ### Sicherheit

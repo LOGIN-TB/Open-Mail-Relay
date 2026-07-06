@@ -147,6 +147,50 @@ def calculate_overage(sent: int, limit: int) -> int:
     return math.ceil((sent - limit) / 1000)
 
 
+def get_user_quota(db: Session, user: SmtpUser, year_month: str | None = None) -> dict | None:
+    """Monthly quota snapshot for one SMTP user — shaped for the Portal API.
+
+    Returns None when the user has no package assigned. `used` is counted live
+    from mail_events for the given (default: current) calendar month, using the
+    same definition as refresh_monthly_usage, so the figure is always fresh and
+    matches billing.
+    """
+    if not user.package_id:
+        return None
+    pkg = db.query(Package).filter(Package.id == user.package_id).first()
+    if not pkg:
+        return None
+
+    if year_month is None:
+        year_month = datetime.now().strftime("%Y-%m")
+    year, month = int(year_month[:4]), int(year_month[5:7])
+    month_start = datetime(year, month, 1)
+    month_end = datetime(year + 1, 1, 1) if month == 12 else datetime(year, month + 1, 1)
+
+    used = (
+        db.query(func.count(MailEvent.id))
+        .filter(
+            MailEvent.status == "sent",
+            MailEvent.sasl_username == user.username,
+            MailEvent.timestamp >= month_start,
+            MailEvent.timestamp < month_end,
+        )
+        .scalar()
+    ) or 0
+
+    limit = pkg.monthly_limit
+    return {
+        "package_name": pkg.name,
+        "category": pkg.category,
+        "monthly_limit": limit,
+        "used": used,
+        "remaining": max(0, limit - used),
+        "overage_emails": max(0, used - limit),
+        "overage_units": calculate_overage(used, limit),
+        "period": year_month,
+    }
+
+
 # --- Billing Overview ---
 
 def get_billing_overview(db: Session, year_month: str) -> dict:

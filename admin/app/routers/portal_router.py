@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import SmtpUser, MailEvent, Package
 from app.routers.portal_common import _get_hostname
+from app.services.billing_service import get_user_quota
 from app.services.crypto_service import generate_smtp_password, encrypt_password, decrypt_password
 from app.services.dns_check_service import (
     check_spf, check_dmarc, check_dkim, get_dkim_selector,
@@ -175,7 +176,7 @@ def get_stats(smtp_user_id: int, db: Session = Depends(get_db)):
         },
         "history_24h": history_24h,
         "history_30d": history_30d,
-        "quota": None,
+        "quota": get_user_quota(db, user),
     }
 
 
