@@ -723,7 +723,13 @@ class PortalUpsertRequest(BaseModel):
     service: str | None = None
     mail_domain: str | None = None
     allowed_domains: list[str] | None = None
+    enforced_domains: list[str] | None = None
     enforcement_mode: str | None = None
+
+    @field_validator("enforced_domains")
+    @classmethod
+    def validate_enforced_domains(cls, v: list[str] | None) -> list[str] | None:
+        return _validate_domains(v)
 
     @field_validator("password_hash")
     @classmethod
@@ -747,6 +753,12 @@ class PortalAdoptRequest(BaseModel):
     portal_access_id: str
     package_name: str | None = None
     allowed_domains: list[str] | None = None
+    enforced_domains: list[str] | None = None
+
+    @field_validator("enforced_domains")
+    @classmethod
+    def validate_enforced_domains(cls, v: list[str] | None) -> list[str] | None:
+        return _validate_domains(v)
 
     @field_validator("allowed_domains")
     @classmethod

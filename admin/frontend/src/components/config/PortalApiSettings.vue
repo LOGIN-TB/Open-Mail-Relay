@@ -12,6 +12,7 @@ interface PortalSettings {
   api_url: string
   server_hostname: string
   provisioning_enabled: boolean
+  sender_maps_enabled: boolean
 }
 
 const settings = ref<PortalSettings | null>(null)
@@ -29,6 +30,7 @@ async function save() {
   const body = {
     portal_allowed_ips: settings.value.allowed_ips,
     provisioning_enabled: settings.value.provisioning_enabled,
+    sender_maps_enabled: settings.value.sender_maps_enabled,
   }
   const data = await call(
     () => api.put<PortalSettings>('/portal-settings', body),
@@ -90,6 +92,15 @@ async function generateKey() {
         <label class="toggle-row">
           <input type="checkbox" v-model="settings.provisioning_enabled" />
           <span>{{ settings.provisioning_enabled ? t.config.portalProvisioningOn : t.config.portalProvisioningOff }}</span>
+        </label>
+      </div>
+
+      <div class="field full-width">
+        <label>{{ t.config.senderMaps }}</label>
+        <p class="field-hint">{{ t.config.senderMapsHint }}</p>
+        <label class="toggle-row">
+          <input type="checkbox" v-model="settings.sender_maps_enabled" />
+          <span>{{ settings.sender_maps_enabled ? t.config.senderMapsOn : t.config.senderMapsOff }}</span>
         </label>
       </div>
     </div>

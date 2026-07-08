@@ -62,6 +62,20 @@ if [ -f /etc/postfix-config/throttle_enabled ]; then
     echo "Throttle policy service configured"
 fi
 
+# Sender-Login-Maps (Domain-Bindung) — nur erzwungene Domains stehen in der
+# Map; reject_known_sender_login_mismatch laesst unmapped Domains unbehelligt.
+if [ -f /etc/postfix-config/sender_maps_enabled ]; then
+    if [ -f /etc/postfix-config/sender_login_maps ]; then
+        cp /etc/postfix-config/sender_login_maps /etc/postfix/sender_login_maps
+    else
+        touch /etc/postfix/sender_login_maps
+    fi
+    postmap /etc/postfix/sender_login_maps
+    postconf -e "smtpd_sender_login_maps = hash:/etc/postfix/sender_login_maps"
+    postconf -e "smtpd_sender_restrictions = reject_known_sender_login_mismatch"
+    echo "Sender login maps (domain binding) configured"
+fi
+
 # Erhoehte Inbound-Limits (Outbound wird gedrosselt)
 postconf -e "smtpd_client_connection_rate_limit = 500"
 

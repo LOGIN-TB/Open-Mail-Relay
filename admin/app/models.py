@@ -127,7 +127,12 @@ class SmtpUser(Base):
     portal_access_id = Column(String, nullable=True)  # portal smtp_accesses UUID
     # JSON array of sender domains this user may use (domain binding).
     allowed_domains = Column(Text, nullable=True)
+    # JSON array — subset of allowed_domains that is ENFORCED: these domains
+    # go into the Postfix sender_login_maps (reject_known_sender_login_mismatch
+    # rejects only mapped domains; unmapped = monitor = unrestricted).
+    enforced_domains = Column(Text, nullable=True)
     # Sender-binding rollout stage: 'monitor' (log only) | 'enforce' (reject).
+    # Display info derived from enforced_domains since migration 017.
     enforcement_mode = Column(String, nullable=False, default="monitor", server_default="monitor")
     created_at = Column(DateTime, default=func.now())
     # Touched on every mutation (admin UI and portal API alike) — the portal

@@ -21,7 +21,7 @@ from app.database import get_db
 from app.models import SmtpUser, MailEvent, Package
 from app.routers.portal_common import _get_hostname
 from app.services.billing_service import get_user_quota
-from app.services.crypto_service import generate_smtp_password, encrypt_password, decrypt_password
+from app.services.crypto_service import generate_smtp_password, encrypt_password, decrypt_password, hash_smtp_password
 from app.services.dns_check_service import (
     check_spf, check_dmarc, check_dkim, get_dkim_selector,
     get_server_info as dns_get_server_info,
@@ -38,7 +38,7 @@ from app.services.abuse_service import get_abuse_settings
 
 logger = logging.getLogger(__name__)
 
-VERSION = "2.5.0"
+VERSION = "2.6.0"
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +254,11 @@ def reset_password(smtp_user_id: int, db: Session = Depends(get_db)):
 
     password = generate_smtp_password()
     user.password_encrypted = encrypt_password(password)
+    # Hash-first users (portal-managed) authenticate against password_hash —
+    # without updating it the new password would never work (lockout).
+    if user.password_hash:
+        user.password_hash = hash_smtp_password(password)
+    user.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     db.refresh(user)
 
@@ -278,6 +283,10 @@ def get_config_pdf(smtp_user_id: int, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="SMTP user not found")
 
+    if not user.password_encrypted:
+        # Hash-only (portal-managed, plaintext purged): PDF exists only
+        # centrally at creation/rotation time.
+        raise HTTPException(status_code=410, detail="Managed centrally via the MailBridge portal")
     try:
         password = decrypt_password(user.password_encrypted)
     except Exception:

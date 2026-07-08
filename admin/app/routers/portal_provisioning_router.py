@@ -33,6 +33,7 @@ from app.schemas import (
 )
 from app.services.crypto_service import decrypt_password, hash_smtp_password
 from app.services.sasl_service import sync_dovecot_users
+from app.services.sender_maps_service import sync_sender_maps
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,7 @@ def _user_out(user: SmtpUser, pkg_map: dict[int, Package]) -> dict:
         "service": user.service,
         "mail_domain": user.mail_domain,
         "allowed_domains": json.loads(user.allowed_domains) if user.allowed_domains else None,
+        "enforced_domains": json.loads(user.enforced_domains) if user.enforced_domains else None,
         "enforcement_mode": user.enforcement_mode,
         "has_plaintext": user.password_encrypted is not None,
         "created_at": user.created_at.isoformat() if user.created_at else None,
@@ -108,6 +110,10 @@ def _sync_dovecot_or_500(db: Session) -> None:
         # the file sync. Surface the failure so the portal marks the access.
         logger.error(f"Dovecot sync failed after portal provisioning: {msg}")
         raise HTTPException(status_code=502, detail=f"Dovecot-Sync fehlgeschlagen: {msg}")
+    # Domain binding: enforced_domains / is_active feed the sender map.
+    # No-op while the feature switch is off; failures only logged (the map
+    # regenerates on the next mutation or toggle).
+    sync_sender_maps(db)
 
 
 # ---------------------------------------------------------------------------
@@ -237,7 +243,10 @@ def upsert_smtp_user(
         user.mail_domain = body.mail_domain or None
     if body.allowed_domains is not None:
         user.allowed_domains = json.dumps(body.allowed_domains) if body.allowed_domains else None
-    if body.enforcement_mode is not None:
+    if body.enforced_domains is not None:
+        user.enforced_domains = json.dumps(body.enforced_domains) if body.enforced_domains else None
+        user.enforcement_mode = "enforce" if body.enforced_domains else "monitor"
+    elif body.enforcement_mode is not None:
         user.enforcement_mode = body.enforcement_mode
     user.updated_at = datetime.utcnow()
 
@@ -290,6 +299,9 @@ def adopt_smtp_user(
         user.package_id = pkg.id if pkg else None
     if body.allowed_domains is not None:
         user.allowed_domains = json.dumps(body.allowed_domains) if body.allowed_domains else None
+    if body.enforced_domains is not None:
+        user.enforced_domains = json.dumps(body.enforced_domains) if body.enforced_domains else None
+        user.enforcement_mode = "enforce" if body.enforced_domains else "monitor"
     user.updated_at = datetime.utcnow()
 
     db.commit()

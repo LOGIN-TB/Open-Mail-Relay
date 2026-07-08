@@ -17,8 +17,9 @@ from app.database import get_db
 from app.dependencies import require_admin
 from app.models import SmtpUser, AuditLog, User, Package
 from app.schemas import SmtpUserCreate, SmtpUserOut, SmtpUserWithPassword, SmtpUserUpdate
-from app.services.crypto_service import generate_smtp_password, encrypt_password, decrypt_password
+from app.services.crypto_service import generate_smtp_password, encrypt_password, decrypt_password, hash_smtp_password
 from app.services.sasl_service import sync_dovecot_users
+from app.services.sender_maps_service import sync_sender_maps
 from app.services.pdf_service import generate_config_pdf
 from app.services.postfix_service import read_main_cf
 from app.services.spf_check_service import check_customer_spf, check_customer_dkim_cname
@@ -99,6 +100,7 @@ def create_smtp_user(
     _audit(db, admin, "smtp_user_created", f"Created SMTP user '{body.username}'", request)
 
     success, msg = sync_dovecot_users(db)
+    sync_sender_maps(db)
     if not success:
         logger.warning(f"Dovecot sync failed after creating user: {msg}")
 
@@ -156,6 +158,7 @@ def update_smtp_user(
     _audit(db, admin, "smtp_user_updated", f"SMTP user '{user.username}' updated", request)
 
     success, msg = sync_dovecot_users(db)
+    sync_sender_maps(db)
     if not success:
         logger.warning(f"Dovecot sync failed after updating user: {msg}")
 
@@ -183,6 +186,10 @@ def regenerate_password(
 
     password = generate_smtp_password()
     user.password_encrypted = encrypt_password(password)
+    # Hash-first users (portal-managed) authenticate against password_hash —
+    # without updating it the new password would never work (lockout).
+    if user.password_hash:
+        user.password_hash = hash_smtp_password(password)
     db.commit()
     db.refresh(user)
 
@@ -190,6 +197,7 @@ def regenerate_password(
            f"Regenerated password for SMTP user '{user.username}'", request)
 
     success, msg = sync_dovecot_users(db)
+    sync_sender_maps(db)
     if not success:
         logger.warning(f"Dovecot sync failed after password regeneration: {msg}")
 
@@ -232,12 +240,20 @@ def delete_smtp_user(
     _audit(db, admin, "smtp_user_deleted", f"Deleted SMTP user '{username}'", request)
 
     success, msg = sync_dovecot_users(db)
+    sync_sender_maps(db)
     if not success:
         logger.warning(f"Dovecot sync failed after deleting user: {msg}")
 
 
 def _build_config_pdf(user: SmtpUser, db: Session) -> tuple[bytes, dict | None]:
     """Generate config PDF and return (pdf_bytes, operator_info)."""
+    if not user.password_encrypted:
+        # Hash-only (portal-managed, plaintext purged): the sheet can only be
+        # produced centrally at creation/rotation time.
+        raise HTTPException(
+            status_code=410,
+            detail="Zugangsdaten werden zentral ueber das MailBridge-Portal verwaltet — PDF dort bei Anlage/Rotation",
+        )
     try:
         password = decrypt_password(user.password_encrypted)
     except Exception:
