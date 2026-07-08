@@ -20,6 +20,7 @@ export interface SmtpUserEditData {
   contact_email: string | null
   receive_reports: boolean
   package_id: number | null
+  portal_managed?: boolean
 }
 
 const props = defineProps<{
@@ -121,6 +122,10 @@ function save() {
     @update:visible="!$event && emit('close')"
   >
     <form @submit.prevent="save" class="dialog-form">
+      <div v-if="user?.portal_managed" class="portal-warning">
+        <i class="pi pi-exclamation-triangle"></i>
+        {{ t.smtpUsers.portalManagedWarning }}
+      </div>
       <!-- Konto -->
       <div class="form-section">
         <div class="section-label">{{ t.smtpUsers.account }}</div>
@@ -247,6 +252,19 @@ function save() {
   font-size: 0.85rem;
   font-weight: 600;
   color: #475569;
+}
+
+.portal-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 .hint {

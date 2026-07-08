@@ -23,6 +23,7 @@ from app.routers import provider_block_router
 from app.routers import dns_check_router
 from app.routers import billing_router
 from app.routers import portal_router
+from app.routers import portal_provisioning_router
 from app.routers.portal_common import portal_auth_middleware
 from app.routers.portal_settings_router import settings_router as portal_settings_router
 from app.services.stats_collector import StatsCollector
@@ -363,6 +364,8 @@ app.include_router(rbl_router.router, prefix="/api/rbl", tags=["rbl"])
 app.include_router(provider_block_router.router, prefix="/api/provider-blocks", tags=["provider-blocks"])
 app.include_router(dns_check_router.router, prefix="/api/dns-check", tags=["dns-check"])
 app.include_router(billing_router.router, prefix="/api/billing", tags=["billing"])
+# v1 first: same auth middleware ("/api/portal" prefix match) protects both.
+app.include_router(portal_provisioning_router.router, prefix="/api/portal/v1", tags=["portal-provisioning"])
 app.include_router(portal_router.router, prefix="/api/portal", tags=["portal"])
 app.include_router(portal_settings_router, prefix="/api/portal-settings", tags=["portal-settings"])
 

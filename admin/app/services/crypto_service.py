@@ -49,3 +49,29 @@ def encrypt_password(plain: str) -> str:
 def decrypt_password(token: str) -> str:
     """Decrypt a Fernet-encrypted password back to plaintext."""
     return _get_fernet().decrypt(token.encode()).decode()
+
+
+# Dovecot passwd-file hash format: {SHA512-CRYPT}$6$<salt>$<86 chars>
+SMTP_PASSWORD_HASH_RE = r"^\{SHA512-CRYPT\}\$6\$[./A-Za-z0-9]{8,16}\$[./A-Za-z0-9]{86}$"
+
+
+def hash_smtp_password(plain: str) -> str:
+    """Hash a plaintext SMTP password for the Dovecot passwd-file.
+
+    Primary: glibc sha512_crypt via the stdlib crypt module (python:3.12
+    base image). Fallback for Python >= 3.13 (crypt removed) or platforms
+    without $6$ support: `openssl passwd -6`, password passed via stdin so
+    it never appears in a process list.
+    """
+    try:
+        import crypt
+        if any(getattr(m, "name", "") == "SHA512" for m in crypt.methods):
+            return "{SHA512-CRYPT}" + crypt.crypt(plain, crypt.mksalt(crypt.METHOD_SHA512))
+    except ImportError:
+        pass
+    import subprocess
+    out = subprocess.run(
+        ["openssl", "passwd", "-6", "-stdin"],
+        input=plain, capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    return "{SHA512-CRYPT}" + out

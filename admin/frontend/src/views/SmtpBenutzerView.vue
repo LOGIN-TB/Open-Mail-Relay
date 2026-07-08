@@ -76,6 +76,7 @@ function openEdit(user: SmtpUserItem) {
     contact_email: user.contact_email,
     receive_reports: user.receive_reports,
     package_id: user.package_id,
+    portal_managed: user.portal_managed,
   }
   dialogVisible.value = true
 }

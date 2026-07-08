@@ -25,6 +25,15 @@ def sync_dovecot_users(db: Session) -> tuple[bool, str]:
 
         lines = []
         for user in users:
+            # Hash-only users (portal-provisioned) take precedence; legacy
+            # users keep their reversible {PLAIN} entry. Dovecot supports
+            # mixed schemes per line in the same passwd-file.
+            if user.password_hash:
+                lines.append(f"{user.username}:{user.password_hash}")
+                continue
+            if not user.password_encrypted:
+                logger.error(f"SMTP user {user.username} has neither password_hash nor password_encrypted — skipped")
+                continue
             try:
                 plain_pw = decrypt_password(user.password_encrypted)
                 lines.append(f"{user.username}:{{PLAIN}}{plain_pw}")

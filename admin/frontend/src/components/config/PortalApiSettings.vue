@@ -11,6 +11,7 @@ interface PortalSettings {
   allowed_ips: string
   api_url: string
   server_hostname: string
+  provisioning_enabled: boolean
 }
 
 const settings = ref<PortalSettings | null>(null)
@@ -25,7 +26,10 @@ onMounted(async () => {
 async function save() {
   if (!settings.value) return
   saving.value = true
-  const body = { portal_allowed_ips: settings.value.allowed_ips }
+  const body = {
+    portal_allowed_ips: settings.value.allowed_ips,
+    provisioning_enabled: settings.value.provisioning_enabled,
+  }
   const data = await call(
     () => api.put<PortalSettings>('/portal-settings', body),
     { success: t.config.portalSettingsSaved },
@@ -78,6 +82,15 @@ async function generateKey() {
           class="input"
           placeholder="z.B. 203.0.113.50, 198.51.100.10"
         />
+      </div>
+
+      <div class="field full-width">
+        <label>{{ t.config.portalProvisioning }}</label>
+        <p class="field-hint">{{ t.config.portalProvisioningHint }}</p>
+        <label class="toggle-row">
+          <input type="checkbox" v-model="settings.provisioning_enabled" />
+          <span>{{ settings.provisioning_enabled ? t.config.portalProvisioningOn : t.config.portalProvisioningOff }}</span>
+        </label>
       </div>
     </div>
 
@@ -177,6 +190,15 @@ async function generateKey() {
   display: flex;
   gap: 0.5rem;
   align-items: stretch;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #334155;
+  cursor: pointer;
 }
 
 .key-row .input {
