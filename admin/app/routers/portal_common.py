@@ -22,7 +22,14 @@ logger = logging.getLogger(__name__)
 PORTAL_DEFAULTS = {
     "portal_api_key": "",
     "portal_allowed_ips": "",
+    # Kill switch for the v1 provisioning API: all writes return 403 until
+    # this is deliberately enabled per relay ("1") in the admin UI.
+    "portal_provisioning_enabled": "",
 }
+
+
+def provisioning_enabled(db: Session) -> bool:
+    return _get_portal_setting(db, "portal_provisioning_enabled") == "1"
 
 
 # ---------------------------------------------------------------------------

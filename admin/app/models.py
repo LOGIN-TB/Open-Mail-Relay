@@ -107,7 +107,12 @@ class SmtpUser(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String, unique=True, nullable=False, index=True)
-    password_encrypted = Column(String, nullable=False)  # Fernet-encrypted
+    # Legacy credential store (reversible). NULL for hash-only users; kept
+    # during the portal migration so existing credentials stay valid.
+    password_encrypted = Column(String, nullable=True)  # Fernet-encrypted
+    # Dovecot-ready hash, e.g. "{SHA512-CRYPT}$6$...". Takes precedence over
+    # password_encrypted in the passwd-file sync.
+    password_hash = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     company = Column(String, nullable=True)
     service = Column(String, nullable=True)
@@ -115,7 +120,19 @@ class SmtpUser(Base):
     contact_email = Column(String, nullable=True)
     receive_reports = Column(Boolean, default=True, nullable=False, server_default="1")
     package_id = Column(Integer, ForeignKey("packages.id", ondelete="SET NULL"), nullable=True)
+    # Provisioning ownership: 'local' = created on this relay (admin UI),
+    # 'portal' = provisioned by the central portal (control plane).
+    origin = Column(String, nullable=False, default="local", server_default="local")
+    portal_managed = Column(Boolean, nullable=False, default=False, server_default="0")
+    portal_access_id = Column(String, nullable=True)  # portal smtp_accesses UUID
+    # JSON array of sender domains this user may use (domain binding).
+    allowed_domains = Column(Text, nullable=True)
+    # Sender-binding rollout stage: 'monitor' (log only) | 'enforce' (reject).
+    enforcement_mode = Column(String, nullable=False, default="monitor", server_default="monitor")
     created_at = Column(DateTime, default=func.now())
+    # Touched on every mutation (admin UI and portal API alike) — the portal
+    # reconciler uses this for incremental inventory sync.
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     last_used_at = Column(DateTime, nullable=True)
 

@@ -33,6 +33,7 @@ def get_portal_settings(
 ):
     api_key = _get_portal_setting(db, "portal_api_key")
     allowed_ips = _get_portal_setting(db, "portal_allowed_ips")
+    provisioning_enabled = _get_portal_setting(db, "portal_provisioning_enabled") == "1"
 
     # Build copyable config block
     admin_hostname = app_settings.ADMIN_HOSTNAME
@@ -44,6 +45,7 @@ def get_portal_settings(
         "allowed_ips": allowed_ips,
         "api_url": api_url,
         "server_hostname": relay_hostname,
+        "provisioning_enabled": provisioning_enabled,
     }
 
 
@@ -58,6 +60,10 @@ def update_portal_settings(
     for key, value in body.items():
         if key in allowed_keys:
             _set_portal_setting(db, key, str(value))
+
+    # Kill switch for the v1 provisioning API (bool → "1"/"" in SystemSetting).
+    if "provisioning_enabled" in body:
+        _set_portal_setting(db, "portal_provisioning_enabled", "1" if body["provisioning_enabled"] else "")
 
     db.add(AuditLog(
         user_id=admin.id,

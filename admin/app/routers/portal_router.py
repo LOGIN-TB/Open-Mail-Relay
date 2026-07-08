@@ -38,7 +38,7 @@ from app.services.abuse_service import get_abuse_settings
 
 logger = logging.getLogger(__name__)
 
-VERSION = "2.4.1"
+VERSION = "2.5.0"
 
 
 # ---------------------------------------------------------------------------

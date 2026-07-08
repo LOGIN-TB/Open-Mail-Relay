@@ -243,6 +243,8 @@ class SmtpUserOut(BaseModel):
     receive_reports: bool = True
     package_id: int | None = None
     package_name: str | None = None
+    origin: str = "local"
+    portal_managed: bool = False
     created_at: datetime | None = None
     created_by: int | None = None
     last_used_at: datetime | None = None
@@ -685,3 +687,77 @@ class BillingSettingsUpdate(BaseModel):
     billing_report_from: str | None = None
     usage_report_enabled: bool | None = None
     usage_report_day: str | None = None
+
+
+# --- Portal Provisioning API v1 ---
+
+_PORTAL_HASH_RE = re.compile(r"^\{SHA512-CRYPT\}\$6\$[./A-Za-z0-9]{8,16}\$[./A-Za-z0-9]{86}$")
+_DOMAIN_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$")
+
+
+def _validate_portal_hash(v: str) -> str:
+    if not _PORTAL_HASH_RE.match(v):
+        raise ValueError("password_hash muss das Format {SHA512-CRYPT}$6$<salt>$<hash> haben")
+    return v
+
+
+def _validate_domains(v: list[str] | None) -> list[str] | None:
+    if v is None:
+        return None
+    cleaned = []
+    for d in v:
+        d = d.strip().lower()
+        if not _DOMAIN_RE.match(d):
+            raise ValueError(f"Ungueltige Domain: {d}")
+        cleaned.append(d)
+    return cleaned
+
+
+class PortalUpsertRequest(BaseModel):
+    portal_access_id: str
+    is_active: bool | None = None
+    password_hash: str | None = None  # omitted = credentials untouched
+    package_name: str | None = None
+    contact_email: str | None = None
+    company: str | None = None
+    service: str | None = None
+    mail_domain: str | None = None
+    allowed_domains: list[str] | None = None
+    enforcement_mode: str | None = None
+
+    @field_validator("password_hash")
+    @classmethod
+    def validate_password_hash(cls, v: str | None) -> str | None:
+        return _validate_portal_hash(v) if v is not None else None
+
+    @field_validator("allowed_domains")
+    @classmethod
+    def validate_allowed_domains(cls, v: list[str] | None) -> list[str] | None:
+        return _validate_domains(v)
+
+    @field_validator("enforcement_mode")
+    @classmethod
+    def validate_enforcement_mode(cls, v: str | None) -> str | None:
+        if v is not None and v not in ("monitor", "enforce"):
+            raise ValueError("enforcement_mode muss 'monitor' oder 'enforce' sein")
+        return v
+
+
+class PortalAdoptRequest(BaseModel):
+    portal_access_id: str
+    package_name: str | None = None
+    allowed_domains: list[str] | None = None
+
+    @field_validator("allowed_domains")
+    @classmethod
+    def validate_allowed_domains(cls, v: list[str] | None) -> list[str] | None:
+        return _validate_domains(v)
+
+
+class PortalCredentialsRequest(BaseModel):
+    password_hash: str
+
+    @field_validator("password_hash")
+    @classmethod
+    def validate_password_hash(cls, v: str) -> str:
+        return _validate_portal_hash(v)

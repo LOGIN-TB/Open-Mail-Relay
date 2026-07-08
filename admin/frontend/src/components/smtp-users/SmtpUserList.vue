@@ -14,6 +14,8 @@ export interface SmtpUserItem {
   receive_reports: boolean
   package_id: number | null
   package_name: string | null
+  origin: string
+  portal_managed: boolean
   created_at: string | null
   created_by: number | null
   last_used_at: string | null
@@ -66,7 +68,14 @@ function formatDate(ts: string | null): string {
       </thead>
       <tbody>
         <tr v-for="user in users" :key="user.id">
-          <td><strong>{{ user.username }}</strong></td>
+          <td>
+            <strong>{{ user.username }}</strong>
+            <span
+              v-if="user.portal_managed"
+              class="badge-portal"
+              :title="t.smtpUsers.portalManagedHint"
+            >{{ t.smtpUsers.portalManaged }}</span>
+          </td>
           <td class="text-cell">{{ user.company || '-' }}</td>
           <td class="text-cell">
             <span v-if="user.mail_domain" :title="user.mail_domain">{{ user.mail_domain }}</span>
@@ -225,6 +234,18 @@ function formatDate(ts: string | null): string {
   font-size: 0.7rem;
   border-radius: 12px;
   font-weight: 600;
+}
+
+.badge-portal {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 2px 8px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.7rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: help;
 }
 
 .actions {

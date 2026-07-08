@@ -20,6 +20,8 @@ export interface SmtpUser {
   receive_reports: boolean
   package_id: number | null
   package_name: string | null
+  origin: string
+  portal_managed: boolean
   created_at: string | null
   created_by: number | null
   last_used_at: string | null
