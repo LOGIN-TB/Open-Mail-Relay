@@ -17,6 +17,7 @@ Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - **Phase-F-Werkzeug `app.tools.purge_plaintext`** — loescht (nach Dry-Run + `--yes`) die reversiblen Klartext-Passwoerter portal-verwalteter Benutzer; Legacy `config-pdf`/`reset-password` antworten fuer solche Benutzer danach mit 410 statt 500.
 
 ### Behoben
+- **`scripts/update.sh` blieb still stehen** — Wenn der Fast-Forward nicht moeglich war (lokale Aenderungen an versionierten Dateien, server-lokale Commits, detached HEAD), zeigte das Script nur die neuen Commits an und brach dann wegen `set -e` kommentarlos ab; Build und Neustart liefen nie. Jetzt: Vorab-Pruefungen (Branch, Working Tree) und klare Fehlermeldungen mit dem jeweiligen Loesungsweg (`git checkout main`, `git stash`, `git reset --hard origin/main`).
 - **Aussperr-Bug bei Legacy-Passwort-Reset** — `regenerate-password` (Admin) und `POST /api/portal/reset-password/{id}` setzten bei hash-authentifizierten Benutzern (portal-verwaltet) nur `password_encrypted`; Dovecot prueft aber `password_hash` zuerst → neues Passwort haette nie funktioniert. Beide Wege aktualisieren jetzt auch den Hash.
 
 ### Hinzugefuegt (v2.5.0)
