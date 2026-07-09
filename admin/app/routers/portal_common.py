@@ -25,6 +25,9 @@ PORTAL_DEFAULTS = {
     # Kill switch for the v1 provisioning API: all writes return 403 until
     # this is deliberately enabled per relay ("1") in the admin UI.
     "portal_provisioning_enabled": "",
+    # R1: per-user monthly quota enforcement at send time (default off,
+    # staged rollout like the domain-binding switch).
+    "quota_enforcement_enabled": "",
 }
 
 

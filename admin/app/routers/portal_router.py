@@ -18,7 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import SmtpUser, MailEvent, Package
+from app.models import SmtpUser, MailEvent, Package, IpBan, StatsHourly
 from app.routers.portal_common import _get_hostname
 from app.services.billing_service import get_user_quota
 from app.services.crypto_service import generate_smtp_password, encrypt_password, decrypt_password, hash_smtp_password
@@ -27,6 +27,19 @@ from app.services.dns_check_service import (
     get_server_info as dns_get_server_info,
 )
 from app.services.pdf_service import generate_config_pdf
+from app.services.provider_block_service import (
+    delisting_for,
+    get_status as provider_blocks_status,
+    list_blocks as provider_blocks_list,
+)
+from app.services.quota_service import get_quota_enforcement_enabled
+from app.services.throttle_service import (
+    get_current_warmup_phase,
+    get_sent_this_hour,
+    get_sent_today,
+    get_throttle_enabled,
+    get_warmup_status,
+)
 from app.services.rbl_service import (
     get_rbl_status as rbl_get_status,
     get_server_info as rbl_get_server_info,
@@ -38,7 +51,7 @@ from app.services.abuse_service import get_abuse_settings
 
 logger = logging.getLogger(__name__)
 
-VERSION = "2.6.0"
+VERSION = "2.7.0"
 
 
 # ---------------------------------------------------------------------------
@@ -372,6 +385,112 @@ def rbl_status(db: Session = Depends(get_db)):
         "status": "clean" if status.get("all_clean") else "listed",
         "last_checked": settings.get("rbl_last_check_time", ""),
         "listings": listings,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 7b. Deliverability read endpoints (R4, Portal-API 2.7.0) — the portal admin
+#     mirrors provider blocks, throttle state and IP bans read-only; writes
+#     stay in this admin panel (emergency path).
+# ---------------------------------------------------------------------------
+
+@router.get("/provider-blocks")
+def provider_blocks(db: Session = Depends(get_db)):
+    blocks = provider_blocks_list(db)
+    return {
+        "server": _get_hostname(),
+        "status": provider_blocks_status(db),
+        "items": [
+            {
+                "id": b.id,
+                "provider": b.provider,
+                "provider_label": b.provider_label,
+                "blocked_ip": b.blocked_ip,
+                "relay_host": b.relay_host,
+                "block_code": b.block_code,
+                "sample_response": b.sample_response,
+                "first_seen": b.first_seen.isoformat() if b.first_seen else None,
+                "last_seen": b.last_seen.isoformat() if b.last_seen else None,
+                "hit_count": b.hit_count,
+                "status": b.status,
+                "delisting_submitted_at": b.delisting_submitted_at.isoformat() if b.delisting_submitted_at else None,
+                "resolved_at": b.resolved_at.isoformat() if b.resolved_at else None,
+                "delisting": delisting_for(
+                    b.provider, b.blocked_ip or "", b.relay_host or "",
+                    b.block_code or "", b.sample_response or "",
+                ),
+            }
+            for b in blocks
+        ],
+    }
+
+
+@router.get("/throttle-status")
+def throttle_status(db: Session = Depends(get_db)):
+    enabled = get_throttle_enabled(db)
+    phase = get_current_warmup_phase(db) if enabled else None
+    return {
+        "server": _get_hostname(),
+        "enabled": enabled,
+        "quota_enforcement_enabled": get_quota_enforcement_enabled(db),
+        "phase": {
+            "name": phase.name,
+            "max_per_hour": phase.max_per_hour,
+            "max_per_day": phase.max_per_day,
+        } if phase else None,
+        "sent_today": get_sent_today(db),
+        "sent_this_hour": get_sent_this_hour(db),
+        "warmup": get_warmup_status(db),
+    }
+
+
+@router.get("/ip-bans")
+def ip_bans(
+    include_inactive: bool = Query(False),
+    db: Session = Depends(get_db),
+):
+    query = db.query(IpBan)
+    if not include_inactive:
+        query = query.filter(IpBan.is_active == True)  # noqa: E712
+    bans = query.order_by(IpBan.banned_at.desc()).limit(200).all()
+    return {
+        "server": _get_hostname(),
+        "items": [
+            {
+                "id": b.id,
+                "ip_address": b.ip_address,
+                "reason": b.reason,
+                "ban_count": b.ban_count,
+                "fail_count": b.fail_count,
+                "banned_at": b.banned_at.isoformat() if b.banned_at else None,
+                "expires_at": b.expires_at.isoformat() if b.expires_at else None,
+                "is_active": bool(b.is_active),
+            }
+            for b in bans
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# 7c. Load metric (R5, Portal-API 2.7.0) — least-loaded relay assignment.
+# ---------------------------------------------------------------------------
+
+@router.get("/load")
+def load_metric(db: Session = Depends(get_db)):
+    active_users = db.query(func.count(SmtpUser.id)).filter(SmtpUser.is_active == True).scalar() or 0  # noqa: E712
+    total_users = db.query(func.count(SmtpUser.id)).scalar() or 0
+    since = datetime.now() - timedelta(days=30)
+    sent_30d = (
+        db.query(func.coalesce(func.sum(StatsHourly.sent_count), 0))
+        .filter(StatsHourly.hour_start >= since)
+        .scalar()
+    ) or 0
+    return {
+        "server": _get_hostname(),
+        "active_users": int(active_users),
+        "total_users": int(total_users),
+        "sent_30d": int(sent_30d),
+        "sent_today": get_sent_today(db),
     }
 
 

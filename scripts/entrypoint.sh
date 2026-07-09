@@ -62,6 +62,15 @@ if [ -f /etc/postfix-config/throttle_enabled ]; then
     echo "Throttle policy service configured"
 fi
 
+# Kontingent-Durchsetzung (R1) — nutzt denselben Policy-Service wie die
+# Drosselung; Marker stellt den Hook nach Container-Neustart wieder her.
+if [ -f /etc/postfix-config/quota_enforcement_enabled ]; then
+    postconf -e "smtpd_end_of_data_restrictions = check_policy_service inet:admin-panel:9998"
+    postconf -e "smtpd_policy_service_default_action = DUNNO"
+    postconf -e "smtpd_policy_service_timeout = 5"
+    echo "Quota enforcement policy service configured"
+fi
+
 # Sender-Login-Maps (Domain-Bindung) — nur erzwungene Domains stehen in der
 # Map; reject_known_sender_login_mismatch laesst unmapped Domains unbehelligt.
 if [ -f /etc/postfix-config/sender_maps_enabled ]; then

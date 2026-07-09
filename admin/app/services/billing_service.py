@@ -155,10 +155,9 @@ def get_user_quota(db: Session, user: SmtpUser, year_month: str | None = None) -
     same definition as refresh_monthly_usage, so the figure is always fresh and
     matches billing.
     """
-    if not user.package_id:
-        return None
-    pkg = db.query(Package).filter(Package.id == user.package_id).first()
-    if not pkg:
+    override = user.monthly_limit_override
+    pkg = db.query(Package).filter(Package.id == user.package_id).first() if user.package_id else None
+    if pkg is None and override is None:
         return None
 
     if year_month is None:
@@ -178,10 +177,11 @@ def get_user_quota(db: Session, user: SmtpUser, year_month: str | None = None) -
         .scalar()
     ) or 0
 
-    limit = pkg.monthly_limit
+    # R1: the portal-pushed override (trial cap, plan + extra packs) wins.
+    limit = override if override is not None else pkg.monthly_limit
     return {
-        "package_name": pkg.name,
-        "category": pkg.category,
+        "package_name": pkg.name if pkg else "Portal-Limit",
+        "category": pkg.category if pkg else "portal",
         "monthly_limit": limit,
         "used": used,
         "remaining": max(0, limit - used),
@@ -503,6 +503,8 @@ def send_usage_reports(db: Session) -> int:
         db.query(SmtpUser)
         .filter(
             SmtpUser.receive_reports == True,
+            # R3: portal reports live → relay reports off for this user.
+            SmtpUser.monthly_report_enabled == True,
             SmtpUser.contact_email.isnot(None),
             SmtpUser.contact_email != "",
             SmtpUser.package_id.isnot(None),

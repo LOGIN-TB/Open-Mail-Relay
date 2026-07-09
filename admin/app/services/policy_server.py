@@ -7,6 +7,7 @@ import asyncio
 import logging
 
 from app.database import SessionLocal
+from app.services.quota_service import get_quota_enforcement_enabled, quota_checker
 from app.services.throttle_service import (
     get_throttle_enabled,
     get_current_warmup_phase,
@@ -96,43 +97,63 @@ class PolicyServer:
                 pass
 
     def _evaluate(self, attrs: dict[str, str]) -> str:
-        """Evaluate rate limits. Returns HOLD or DUNNO. Fail-open on any error."""
+        """Evaluate per-user quota + warmup rate limits. Fail-open on any error.
+
+        Order matters: the per-user quota check (R1) answers DEFER — the
+        client queue retries and delivery resumes automatically once the
+        portal raises the limit. The warmup throttle keeps its HOLD semantics.
+        """
         try:
-            # Check if throttling is enabled
             db = SessionLocal()
             try:
-                if not get_throttle_enabled(db):
+                throttle_on = get_throttle_enabled(db)
+                quota_on = get_quota_enforcement_enabled(db)
+                if not throttle_on and not quota_on:
                     return "DUNNO"
 
-                phase = get_current_warmup_phase(db)
+                # --- Per-user monthly quota (R1) ---
+                sasl_username = attrs.get("sasl_username", "").strip().lower()
+                if quota_on and sasl_username:
+                    verdict = quota_checker.check(db, sasl_username)
+                    if verdict is not None:
+                        exceeded, used, limit = verdict
+                        if exceeded:
+                            logger.info(
+                                f"DEFER: monthly quota reached for {sasl_username} "
+                                f"({used}/{limit})"
+                            )
+                            return (
+                                "DEFER 4.7.1 Monatskontingent erreicht - "
+                                "Zusatzpakete im Portal freigeben oder Paket wechseln"
+                            )
+
+                phase = get_current_warmup_phase(db) if throttle_on else None
             finally:
                 db.close()
 
-            # Get current counts
-            hour_count, day_count = throttle_counter.get_counts()
+            # --- Global warmup throttle (unchanged) ---
+            if phase is not None:
+                hour_count, day_count = throttle_counter.get_counts()
 
-            # Check limits
-            if hour_count >= phase.max_per_hour or day_count >= phase.max_per_day:
-                sender = attrs.get("sender", "unknown")
-                recipient = attrs.get("recipient", "unknown")
-                logger.info(
-                    f"HOLD: rate limit reached (hour={hour_count}/{phase.max_per_hour}, "
-                    f"day={day_count}/{phase.max_per_day}) for {sender} -> {recipient}"
-                )
-                return "HOLD Rate limit - Aufwaermphase"
+                if hour_count >= phase.max_per_hour or day_count >= phase.max_per_day:
+                    sender = attrs.get("sender", "unknown")
+                    recipient = attrs.get("recipient", "unknown")
+                    logger.info(
+                        f"HOLD: rate limit reached (hour={hour_count}/{phase.max_per_hour}, "
+                        f"day={day_count}/{phase.max_per_day}) for {sender} -> {recipient}"
+                    )
+                    return "HOLD Rate limit - Aufwaermphase"
 
-            # Check burst
-            if hour_count >= phase.burst_limit:
-                # Burst limit is a softer per-evaluation check
-                # Only hold if we've hit the burst within recent evaluations
-                pass
+                # Under limits — count it and let it through
+                throttle_counter.increment()
 
-            # Under limits — count it and let it through
-            throttle_counter.increment()
+                # Trigger DB sync if needed
+                if throttle_counter.should_sync():
+                    throttle_counter.sync_from_db()
 
-            # Trigger DB sync if needed
-            if throttle_counter.should_sync():
-                throttle_counter.sync_from_db()
+            # Mail passes — keep the cached quota counter warm.
+            if sasl_username:
+                quota_checker.register_sent(sasl_username)
 
             return "DUNNO"
 

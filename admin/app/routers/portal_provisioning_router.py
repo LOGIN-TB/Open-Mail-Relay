@@ -33,12 +33,13 @@ from app.schemas import (
 )
 from app.services.crypto_service import decrypt_password, hash_smtp_password
 from app.services.sasl_service import sync_dovecot_users
+from app.services.quota_service import quota_checker
 from app.services.sender_maps_service import sync_sender_maps
 
 logger = logging.getLogger(__name__)
 
 API_VERSION = 1
-FEATURES = ["hash_auth", "adopt", "domain_binding"]
+FEATURES = ["hash_auth", "adopt", "domain_binding", "monthly_report_flag", "limit_override", "quota_enforcement", "load_metric"]
 
 USERNAME_RE = re.compile(r"^[a-z0-9_-]{4,16}$")
 
@@ -97,6 +98,8 @@ def _user_out(user: SmtpUser, pkg_map: dict[int, Package]) -> dict:
         "allowed_domains": json.loads(user.allowed_domains) if user.allowed_domains else None,
         "enforced_domains": json.loads(user.enforced_domains) if user.enforced_domains else None,
         "enforcement_mode": user.enforcement_mode,
+        "monthly_limit_override": user.monthly_limit_override,
+        "monthly_report_enabled": bool(user.monthly_report_enabled),
         "has_plaintext": user.password_encrypted is not None,
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "updated_at": user.updated_at.isoformat() if user.updated_at else None,
@@ -248,11 +251,17 @@ def upsert_smtp_user(
         user.enforcement_mode = "enforce" if body.enforced_domains else "monitor"
     elif body.enforcement_mode is not None:
         user.enforcement_mode = body.enforcement_mode
+    # Omitted = untouched; explicit null clears the override (R1).
+    if "monthly_limit_override" in body.model_fields_set:
+        user.monthly_limit_override = body.monthly_limit_override
+    if body.monthly_report_enabled is not None:
+        user.monthly_report_enabled = body.monthly_report_enabled
     user.updated_at = datetime.utcnow()
 
     db.commit()
     db.refresh(user)
 
+    quota_checker.clear()
     _audit(db, request, "portal_smtp_user_upserted",
            f"{'Created' if created else 'Updated'} SMTP user '{username}' (access {body.portal_access_id})")
 

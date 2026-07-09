@@ -13,6 +13,7 @@ interface PortalSettings {
   server_hostname: string
   provisioning_enabled: boolean
   sender_maps_enabled: boolean
+  quota_enforcement_enabled: boolean
 }
 
 const settings = ref<PortalSettings | null>(null)
@@ -31,6 +32,7 @@ async function save() {
     portal_allowed_ips: settings.value.allowed_ips,
     provisioning_enabled: settings.value.provisioning_enabled,
     sender_maps_enabled: settings.value.sender_maps_enabled,
+    quota_enforcement_enabled: settings.value.quota_enforcement_enabled,
   }
   const data = await call(
     () => api.put<PortalSettings>('/portal-settings', body),
@@ -101,6 +103,15 @@ async function generateKey() {
         <label class="toggle-row">
           <input type="checkbox" v-model="settings.sender_maps_enabled" />
           <span>{{ settings.sender_maps_enabled ? t.config.senderMapsOn : t.config.senderMapsOff }}</span>
+        </label>
+      </div>
+
+      <div class="field full-width">
+        <label>{{ t.config.quotaEnforcement }}</label>
+        <p class="field-hint">{{ t.config.quotaEnforcementHint }}</p>
+        <label class="toggle-row">
+          <input type="checkbox" v-model="settings.quota_enforcement_enabled" />
+          <span>{{ settings.quota_enforcement_enabled ? t.config.quotaEnforcementOn : t.config.quotaEnforcementOff }}</span>
         </label>
       </div>
     </div>

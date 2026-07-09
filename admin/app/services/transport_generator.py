@@ -195,18 +195,21 @@ def apply_throttle_config(db: Session, enabled: bool) -> list[dict]:
         remove_throttle_marker()
         steps.append({"step": "Drosselung deaktivieren", "success": True, "detail": "Marker entfernt"})
 
-        # Remove policy and transport config
+        # Remove transport config; the policy hook is SHARED with the quota
+        # enforcement (R1) and only removed when that is off too.
+        from app.services.quota_service import get_quota_enforcement_enabled
+        keep_policy = get_quota_enforcement_enabled(db)
         exit_code, output = exec_in_container(
             "sh -c '"
-            'postconf -# smtpd_end_of_data_restrictions 2>/dev/null; '
-            'postconf -# transport_maps 2>/dev/null; '
+            + ("" if keep_policy else 'postconf -# smtpd_end_of_data_restrictions 2>/dev/null; ')
+            + 'postconf -# transport_maps 2>/dev/null; '
             'true'
             "'"
         )
         steps.append({
             "step": "Postfix-Policy entfernen",
             "success": True,
-            "detail": "Konfiguration bereinigt",
+            "detail": "Policy-Hook bleibt (Kontingent-Durchsetzung aktiv)" if keep_policy else "Konfiguration bereinigt",
         })
 
         # Release all held mail

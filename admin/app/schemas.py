@@ -725,6 +725,18 @@ class PortalUpsertRequest(BaseModel):
     allowed_domains: list[str] | None = None
     enforced_domains: list[str] | None = None
     enforcement_mode: str | None = None
+    # R1: portal-pushed monthly limit. Omitted = untouched; explicit null
+    # clears the override (distinguished via model_fields_set in the router).
+    monthly_limit_override: int | None = None
+    # R3: False suppresses this relay's automatic usage reports for the user.
+    monthly_report_enabled: bool | None = None
+
+    @field_validator("monthly_limit_override")
+    @classmethod
+    def validate_monthly_limit_override(cls, v: int | None) -> int | None:
+        if v is not None and (v < 0 or v > 10_000_000):
+            raise ValueError("monthly_limit_override muss zwischen 0 und 10000000 liegen")
+        return v
 
     @field_validator("enforced_domains")
     @classmethod

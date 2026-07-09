@@ -119,6 +119,15 @@ class SmtpUser(Base):
     mail_domain = Column(String, nullable=True)
     contact_email = Column(String, nullable=True)
     receive_reports = Column(Boolean, default=True, nullable=False, server_default="1")
+    # R3 (Portal-API 2.7.0): the portal sends False as soon as its own monthly
+    # reports are live — suppresses this relay's automatic usage reports for
+    # the user (effective = receive_reports AND monthly_report_enabled).
+    monthly_report_enabled = Column(Boolean, default=True, nullable=False, server_default="1")
+    # R1 (Portal-API 2.7.0): portal-pushed monthly send limit (trial cap, plan
+    # limit incl. released extra packs). Overrides the package limit; NULL =
+    # package limit (or unlimited without a package). Enforced by the policy
+    # server when quota_enforcement_enabled is on.
+    monthly_limit_override = Column(Integer, nullable=True)
     package_id = Column(Integer, ForeignKey("packages.id", ondelete="SET NULL"), nullable=True)
     # Provisioning ownership: 'local' = created on this relay (admin UI),
     # 'portal' = provisioned by the central portal (control plane).
