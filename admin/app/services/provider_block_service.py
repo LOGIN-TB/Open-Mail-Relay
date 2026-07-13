@@ -257,6 +257,18 @@ GENERIC_PROVIDER = {
     },
 }
 
+# Recipient-level rejections that contain block-sounding words but are NOT
+# sending-IP blocks. Microsoft Exchange Online answers for non-existent
+# mailboxes (Directory-Based Edge Blocking) with
+#   '550 5.4.1 Recipient address rejected: Access denied ... aka.ms/EXOSmtpErrors'
+# — the recipient does not exist; no delisting portal helps. The same phrase is
+# produced by Postfix check_recipient_access rejects on other MTAs. Checked
+# BEFORE the block keywords below ('access denied' would otherwise match).
+_RECIPIENT_REJECT_RE = re.compile(
+    r"recipient address rejected:\s*access denied",
+    re.IGNORECASE,
+)
+
 # Generic block keywords — strong indicators that an NDR is a *block*, not an
 # ordinary recipient error (user unknown, mailbox full, …). Kept deliberately
 # block-specific to avoid false positives.
@@ -367,6 +379,11 @@ def detect_block(text: str, dsn_code: str | None, relay_host: str | None) -> dic
     block if the text carries a strong block signal.
     """
     if not text:
+        return None
+
+    # Per-recipient rejection (mailbox does not exist) — never an IP block,
+    # even though the text contains 'Access denied'.
+    if _RECIPIENT_REJECT_RE.search(text):
         return None
 
     prov = classify_provider(relay_host)
