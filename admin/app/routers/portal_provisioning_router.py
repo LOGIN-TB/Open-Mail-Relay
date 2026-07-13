@@ -29,6 +29,7 @@ from app.routers.portal_common import _get_hostname, _portal_client_ip, provisio
 from app.schemas import (
     PortalAdoptRequest,
     PortalCredentialsRequest,
+    PortalPackageSyncRequest,
     PortalUpsertRequest,
 )
 from app.services.crypto_service import decrypt_password, hash_smtp_password
@@ -39,7 +40,7 @@ from app.services.sender_maps_service import sync_sender_maps
 logger = logging.getLogger(__name__)
 
 API_VERSION = 1
-FEATURES = ["hash_auth", "adopt", "domain_binding", "monthly_report_flag", "limit_override", "quota_enforcement", "load_metric"]
+FEATURES = ["hash_auth", "adopt", "domain_binding", "monthly_report_flag", "limit_override", "quota_enforcement", "load_metric", "package_sync"]
 
 USERNAME_RE = re.compile(r"^[a-z0-9_-]{4,16}$")
 
@@ -90,6 +91,7 @@ def _user_out(user: SmtpUser, pkg_map: dict[int, Package]) -> dict:
             "name": pkg.name,
             "category": pkg.category,
             "monthly_limit": pkg.monthly_limit,
+            "portal_plan_code": pkg.portal_plan_code,
         } if pkg else None,
         "contact_email": user.contact_email,
         "company": user.company,
@@ -179,7 +181,7 @@ def list_smtp_users(
 
 
 # ---------------------------------------------------------------------------
-# 3. Packages (read-only mirror source; package CRUD stays admin-only)
+# 3. Packages (portal plan mirror; local package CRUD stays admin-only)
 # ---------------------------------------------------------------------------
 
 @router.get("/packages")
@@ -194,10 +196,70 @@ def list_packages(db: Session = Depends(get_db)):
                 "category": p.category,
                 "monthly_limit": p.monthly_limit,
                 "is_active": bool(p.is_active),
+                "portal_plan_code": p.portal_plan_code,
             }
             for p in packages
         ],
     }
+
+
+@router.put("/packages/sync")
+def sync_packages(
+    body: PortalPackageSyncRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Mirror the portal's plan catalogue as packages (portal = leading system).
+
+    Keyed on portal_plan_code so plan renames follow. A local package with the
+    same name and no portal_plan_code is adopted instead of duplicated.
+    Packages absent from the payload are left untouched (local packages stay
+    the admin's business; deleted portal plans arrive as is_active=false).
+    """
+    _require_provisioning(db)
+
+    created, updated, adopted = 0, 0, 0
+    errors: list[dict] = []
+    for item in body.items:
+        pkg = db.query(Package).filter(Package.portal_plan_code == item.plan_code).first()
+        if not pkg:
+            same_name = db.query(Package).filter(Package.name == item.name).first()
+            if same_name is not None:
+                if same_name.portal_plan_code:
+                    errors.append({"plan_code": item.plan_code,
+                                   "detail": f"Name '{item.name}' gehoert bereits zu Plan '{same_name.portal_plan_code}'"})
+                    continue
+                pkg = same_name
+                pkg.portal_plan_code = item.plan_code
+                adopted += 1
+            else:
+                pkg = Package(name=item.name, category="portal", portal_plan_code=item.plan_code)
+                db.add(pkg)
+                created += 1
+        else:
+            name_clash = (
+                db.query(Package)
+                .filter(Package.name == item.name, Package.id != pkg.id)
+                .first()
+            )
+            if name_clash is not None:
+                errors.append({"plan_code": item.plan_code,
+                               "detail": f"Name '{item.name}' wird bereits von einem anderen Paket verwendet"})
+                continue
+            updated += 1
+        pkg.name = item.name
+        pkg.monthly_limit = item.monthly_limit
+        pkg.description = item.description
+        pkg.is_active = item.is_active
+    db.commit()
+
+    # Package limits feed the quota fallback — drop the checker cache.
+    quota_checker.clear()
+    _audit(db, request, "portal_packages_synced",
+           f"Synced {len(body.items)} plans (created={created}, updated={updated}, adopted={adopted}, errors={len(errors)})")
+
+    return {"server": _get_hostname(), "created": created, "updated": updated,
+            "adopted": adopted, "errors": errors}
 
 
 # ---------------------------------------------------------------------------

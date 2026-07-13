@@ -11,6 +11,7 @@ export interface PackageItem {
   monthly_limit: number
   description: string | null
   is_active: boolean
+  portal_plan_code?: string | null
   created_at: string | null
 }
 
@@ -49,6 +50,7 @@ function categoryLabel(cat: string): string {
   if (cat === 'transaction') return t.billing.transaction
   if (cat === 'newsletter') return t.billing.newsletter
   if (cat === 'overage') return t.billing.overage
+  if (cat === 'portal') return t.billing.portal
   return cat
 }
 
@@ -56,6 +58,7 @@ function categoryClass(cat: string): string {
   if (cat === 'transaction') return 'badge-transaction'
   if (cat === 'newsletter') return 'badge-newsletter'
   if (cat === 'overage') return 'badge-overage'
+  if (cat === 'portal') return 'badge-portal-cat'
   return ''
 }
 
@@ -90,6 +93,11 @@ function formatLimit(limit: number): string {
               @keydown.enter="($event.target as HTMLInputElement).blur()"
             />
             <strong v-else class="cell-text">{{ pkg.name }}</strong>
+            <span
+              v-if="pkg.portal_plan_code"
+              class="category-badge badge-portal"
+              :title="t.billing.portalManagedHint"
+            >{{ t.billing.portalManaged }}</span>
           </td>
           <td>
             <span class="category-badge" :class="categoryClass(pkg.category)">
@@ -216,6 +224,17 @@ function formatLimit(limit: number): string {
 .badge-overage {
   background: #fef3c7;
   color: #92400e;
+}
+
+.badge-portal {
+  background: #ede9fe;
+  color: #5b21b6;
+  margin-left: 0.5rem;
+}
+
+.badge-portal-cat {
+  background: #ede9fe;
+  color: #5b21b6;
 }
 
 .actions {

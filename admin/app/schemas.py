@@ -644,6 +644,7 @@ class PackageOut(BaseModel):
     monthly_limit: int
     description: str | None = None
     is_active: bool
+    portal_plan_code: str | None = None
     created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
@@ -785,3 +786,30 @@ class PortalCredentialsRequest(BaseModel):
     @classmethod
     def validate_password_hash(cls, v: str) -> str:
         return _validate_portal_hash(v)
+
+
+class PortalPackageSyncItem(BaseModel):
+    plan_code: str
+    name: str
+    monthly_limit: int
+    description: str | None = None
+    is_active: bool = True
+
+    @field_validator("plan_code", "name")
+    @classmethod
+    def validate_non_empty(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("plan_code und name duerfen nicht leer sein")
+        return v
+
+    @field_validator("monthly_limit")
+    @classmethod
+    def validate_monthly_limit(cls, v: int) -> int:
+        if v < 0 or v > 10_000_000:
+            raise ValueError("monthly_limit muss zwischen 0 und 10000000 liegen")
+        return v
+
+
+class PortalPackageSyncRequest(BaseModel):
+    items: list[PortalPackageSyncItem]

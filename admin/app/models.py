@@ -95,10 +95,13 @@ class Package(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, unique=True, nullable=False)
-    category = Column(String, nullable=False)  # transaction, newsletter, overage
+    category = Column(String, nullable=False)  # transaction, newsletter, overage, portal
     monthly_limit = Column(Integer, nullable=False)
     description = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
+    # Set = mirrored from the portal's plan catalogue (portal is the leading
+    # system; local edits get overwritten by the next sync).
+    portal_plan_code = Column(String, unique=True, nullable=True, index=True)
     created_at = Column(DateTime, default=func.now())
 
 
