@@ -13,6 +13,7 @@ interface PortalSettings {
   server_hostname: string
   provisioning_enabled: boolean
   sender_maps_enabled: boolean
+  strict_sender_enabled: boolean
   quota_enforcement_enabled: boolean
 }
 
@@ -32,6 +33,7 @@ async function save() {
     portal_allowed_ips: settings.value.allowed_ips,
     provisioning_enabled: settings.value.provisioning_enabled,
     sender_maps_enabled: settings.value.sender_maps_enabled,
+    strict_sender_enabled: settings.value.strict_sender_enabled,
     quota_enforcement_enabled: settings.value.quota_enforcement_enabled,
   }
   const data = await call(
@@ -103,6 +105,15 @@ async function generateKey() {
         <label class="toggle-row">
           <input type="checkbox" v-model="settings.sender_maps_enabled" />
           <span>{{ settings.sender_maps_enabled ? t.config.senderMapsOn : t.config.senderMapsOff }}</span>
+        </label>
+      </div>
+
+      <div class="field full-width">
+        <label>{{ t.config.strictSender }}</label>
+        <p class="field-hint">{{ t.config.strictSenderHint }}</p>
+        <label class="toggle-row">
+          <input type="checkbox" v-model="settings.strict_sender_enabled" :disabled="!settings.sender_maps_enabled" />
+          <span>{{ settings.strict_sender_enabled ? t.config.strictSenderOn : t.config.strictSenderOff }}</span>
         </label>
       </div>
 

@@ -146,6 +146,13 @@ class SmtpUser(Base):
     # Sender-binding rollout stage: 'monitor' (log only) | 'enforce' (reject).
     # Display info derived from enforced_domains since migration 017.
     enforcement_mode = Column(String, nullable=False, default="monitor", server_default="monitor")
+    # Strict sender binding (R5, portal ADR 0009): 'strict' = under the strict
+    # switch this user may only send from domains mapped to them (sender_login_
+    # maps); 'unrestricted' = exemption class with today's soft rule (any
+    # domain EXCEPT ones enforced for someone else). Default unrestricted so
+    # existing and locally created users keep their behaviour — the portal
+    # pushes explicit values for its managed accesses.
+    sender_policy = Column(String, nullable=False, default="unrestricted", server_default="unrestricted")
     created_at = Column(DateTime, default=func.now())
     # Touched on every mutation (admin UI and portal API alike) — the portal
     # reconciler uses this for incremental inventory sync.

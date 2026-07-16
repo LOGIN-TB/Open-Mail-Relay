@@ -731,6 +731,8 @@ class PortalUpsertRequest(BaseModel):
     monthly_limit_override: int | None = None
     # R3: False suppresses this relay's automatic usage reports for the user.
     monthly_report_enabled: bool | None = None
+    # R5 (strict sender binding): 'strict' | 'unrestricted'; omitted = untouched.
+    sender_policy: str | None = None
 
     @field_validator("monthly_limit_override")
     @classmethod
@@ -759,6 +761,13 @@ class PortalUpsertRequest(BaseModel):
     def validate_enforcement_mode(cls, v: str | None) -> str | None:
         if v is not None and v not in ("monitor", "enforce"):
             raise ValueError("enforcement_mode muss 'monitor' oder 'enforce' sein")
+        return v
+
+    @field_validator("sender_policy")
+    @classmethod
+    def validate_sender_policy(cls, v: str | None) -> str | None:
+        if v is not None and v not in ("strict", "unrestricted"):
+            raise ValueError("sender_policy muss 'strict' oder 'unrestricted' sein")
         return v
 
 

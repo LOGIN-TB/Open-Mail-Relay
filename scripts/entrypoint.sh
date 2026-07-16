@@ -85,6 +85,23 @@ if [ -f /etc/postfix-config/sender_maps_enabled ]; then
     echo "Sender login maps (domain binding) configured"
 fi
 
+# Strikte Absenderbindung (R5, Portal-ADR 0009) — MUSS nach dem Domain-
+# Bindungs-Block stehen (ueberschreibt smtpd_sender_restrictions):
+# authentifizierte Benutzer duerfen nur noch gemappte Domains senden;
+# Ausnahmen (sender_policy_exempt) behalten die weiche Regel.
+if [ -f /etc/postfix-config/strict_sender_enabled ] && [ -f /etc/postfix-config/sender_maps_enabled ]; then
+    if [ -f /etc/postfix-config/sender_policy_exempt ]; then
+        cp /etc/postfix-config/sender_policy_exempt /etc/postfix/sender_policy_exempt
+    else
+        touch /etc/postfix/sender_policy_exempt
+    fi
+    postmap /etc/postfix/sender_policy_exempt
+    postconf -e "smtpd_restriction_classes = soft_sender_policy"
+    postconf -e "soft_sender_policy = reject_known_sender_login_mismatch"
+    postconf -e "smtpd_sender_restrictions = check_sasl_access hash:/etc/postfix/sender_policy_exempt, reject_sender_login_mismatch"
+    echo "Strict sender binding configured"
+fi
+
 # Erhoehte Inbound-Limits (Outbound wird gedrosselt)
 postconf -e "smtpd_client_connection_rate_limit = 500"
 

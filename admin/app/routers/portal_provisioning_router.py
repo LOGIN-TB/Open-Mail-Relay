@@ -40,7 +40,7 @@ from app.services.sender_maps_service import sync_sender_maps
 logger = logging.getLogger(__name__)
 
 API_VERSION = 1
-FEATURES = ["hash_auth", "adopt", "domain_binding", "monthly_report_flag", "limit_override", "quota_enforcement", "load_metric", "package_sync"]
+FEATURES = ["hash_auth", "adopt", "domain_binding", "monthly_report_flag", "limit_override", "quota_enforcement", "load_metric", "package_sync", "sender_policy"]
 
 USERNAME_RE = re.compile(r"^[a-z0-9_-]{4,16}$")
 
@@ -100,6 +100,7 @@ def _user_out(user: SmtpUser, pkg_map: dict[int, Package]) -> dict:
         "allowed_domains": json.loads(user.allowed_domains) if user.allowed_domains else None,
         "enforced_domains": json.loads(user.enforced_domains) if user.enforced_domains else None,
         "enforcement_mode": user.enforcement_mode,
+        "sender_policy": user.sender_policy,
         "monthly_limit_override": user.monthly_limit_override,
         "monthly_report_enabled": bool(user.monthly_report_enabled),
         "has_plaintext": user.password_encrypted is not None,
@@ -318,6 +319,9 @@ def upsert_smtp_user(
         user.monthly_limit_override = body.monthly_limit_override
     if body.monthly_report_enabled is not None:
         user.monthly_report_enabled = body.monthly_report_enabled
+    # R5: feeds the sender_policy_exempt map (strict sender binding).
+    if body.sender_policy is not None:
+        user.sender_policy = body.sender_policy
     user.updated_at = datetime.utcnow()
 
     db.commit()

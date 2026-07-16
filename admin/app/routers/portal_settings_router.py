@@ -14,7 +14,12 @@ from app.database import get_db
 from app.dependencies import require_admin
 from app.models import AuditLog, User
 from app.services.quota_service import apply_quota_config, get_quota_enforcement_enabled
-from app.services.sender_maps_service import apply_sender_maps_config, get_sender_maps_enabled
+from app.services.sender_maps_service import (
+    apply_sender_maps_config,
+    apply_strict_sender_config,
+    get_sender_maps_enabled,
+    get_strict_sender_enabled,
+)
 from app.routers.portal_common import (
     _get_hostname,
     _get_portal_setting,
@@ -37,6 +42,7 @@ def get_portal_settings(
     allowed_ips = _get_portal_setting(db, "portal_allowed_ips")
     provisioning_enabled = _get_portal_setting(db, "portal_provisioning_enabled") == "1"
     sender_maps_enabled = get_sender_maps_enabled(db)
+    strict_sender_enabled = get_strict_sender_enabled(db)
     quota_enforcement_enabled = get_quota_enforcement_enabled(db)
 
     # Build copyable config block
@@ -51,6 +57,7 @@ def get_portal_settings(
         "server_hostname": relay_hostname,
         "provisioning_enabled": provisioning_enabled,
         "sender_maps_enabled": sender_maps_enabled,
+        "strict_sender_enabled": strict_sender_enabled,
         "quota_enforcement_enabled": quota_enforcement_enabled,
     }
 
@@ -79,6 +86,21 @@ def update_portal_settings(
             user_id=admin.id,
             action="sender_maps_toggled",
             details=f"Domain-Bindung {'aktiviert' if body['sender_maps_enabled'] else 'deaktiviert'}: "
+                    + "; ".join(f"{st['step']}={'OK' if st['success'] else st['detail']}" for st in steps),
+            ip_address=request.client.host if request.client else None,
+        ))
+        db.commit()
+
+    # Strict sender binding (R5, portal ADR 0009): only mapped domains may be
+    # sent; exempt users keep the soft rule. Requires domain binding — the
+    # service guards that and reports a failed step instead of applying.
+    # Processed AFTER sender_maps so "both on in one request" works.
+    if "strict_sender_enabled" in body and bool(body["strict_sender_enabled"]) != get_strict_sender_enabled(db):
+        steps = apply_strict_sender_config(db, bool(body["strict_sender_enabled"]))
+        db.add(AuditLog(
+            user_id=admin.id,
+            action="strict_sender_toggled",
+            details=f"Strikte Absenderbindung {'aktiviert' if body['strict_sender_enabled'] else 'deaktiviert'}: "
                     + "; ".join(f"{st['step']}={'OK' if st['success'] else st['detail']}" for st in steps),
             ip_address=request.client.host if request.client else None,
         ))
