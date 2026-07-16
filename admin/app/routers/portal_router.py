@@ -51,7 +51,10 @@ from app.services.abuse_service import get_abuse_settings
 
 logger = logging.getLogger(__name__)
 
-VERSION = "2.7.0"
+# Bumped with every portal-facing API extension (capabilities tell the portal
+# WHAT works; this string is the human-readable "which build runs there").
+# 2.8.0: sender_policy (strikte Absenderbindung) + fleet_events.
+VERSION = "2.8.0"
 
 
 # ---------------------------------------------------------------------------
