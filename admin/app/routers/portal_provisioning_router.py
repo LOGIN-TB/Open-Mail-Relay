@@ -40,7 +40,7 @@ from app.services.sender_maps_service import sync_sender_maps
 logger = logging.getLogger(__name__)
 
 API_VERSION = 1
-FEATURES = ["hash_auth", "adopt", "domain_binding", "monthly_report_flag", "limit_override", "quota_enforcement", "load_metric", "package_sync", "sender_policy"]
+FEATURES = ["hash_auth", "adopt", "domain_binding", "monthly_report_flag", "limit_override", "quota_enforcement", "load_metric", "package_sync", "sender_policy", "fleet_events"]
 
 USERNAME_RE = re.compile(r"^[a-z0-9_-]{4,16}$")
 

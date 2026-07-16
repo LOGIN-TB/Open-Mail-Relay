@@ -682,6 +682,95 @@ def portal_user_logs_csv(
     )
 
 
+# ---------------------------------------------------------------------------
+# Fleet events (capability 'fleet_events'): the relay-wide protocol view of
+# the admin panel, mirrored for the portal — one call per relay instead of a
+# fan-out over every SMTP user. Items carry sasl_username so the portal can
+# attribute rows across customers.
+# ---------------------------------------------------------------------------
+
+@router.get("/events")
+def portal_fleet_events(
+    status: str | None = Query(None, description="Filter by status (sent/deferred/bounced/rejected)"),
+    search: str | None = Query(None, description="Substring match on sender/recipient/client_ip/queue_id"),
+    sasl_username: str | None = Query(None, description="Exact SMTP username filter"),
+    date_from: str | None = Query(None, description="ISO timestamp, inclusive"),
+    date_to: str | None = Query(None, description="ISO timestamp, inclusive"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    """Paginated mail events across ALL SMTP users of this relay."""
+    df = _parse_iso(date_from)
+    dt = _parse_iso(date_to)
+
+    query = db.query(MailEvent)
+    if sasl_username:
+        query = query.filter(MailEvent.sasl_username == sasl_username.strip().lower())
+    query = _apply_log_filters(query, status=status, search=search, date_from=df, date_to=dt)
+
+    total = query.count()
+    pages = max(1, (total + per_page - 1) // per_page)
+    items = (
+        query.order_by(MailEvent.timestamp.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+    return {
+        "server": _get_hostname(),
+        "items": [{**_event_to_dict(e), "sasl_username": e.sasl_username} for e in items],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pages,
+    }
+
+
+@router.get("/events.csv")
+def portal_fleet_events_csv(
+    status: str | None = None,
+    search: str | None = None,
+    sasl_username: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """CSV export of the relay-wide event view. Capped at 10000 rows."""
+    df = _parse_iso(date_from)
+    dt = _parse_iso(date_to)
+
+    query = db.query(MailEvent)
+    if sasl_username:
+        query = query.filter(MailEvent.sasl_username == sasl_username.strip().lower())
+    query = _apply_log_filters(query, status=status, search=search, date_from=df, date_to=dt)
+    events = query.order_by(MailEvent.timestamp.desc()).limit(10000).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Zeitpunkt", "SASL-Benutzer", "Status", "Queue-ID", "Absender", "Empfaenger",
+        "Relay", "Delay", "DSN", "DSN-Code", "Remote-Response",
+        "Groesse", "Nachricht", "Client-IP",
+    ])
+    for e in events:
+        writer.writerow([
+            e.timestamp.isoformat() + "Z" if e.timestamp else "",
+            e.sasl_username or "", e.status, e.queue_id or "", e.sender or "",
+            e.recipient or "", e.relay or "", e.delay or "", e.dsn or "",
+            e.dsn_code or "", e.remote_response or "",
+            e.size or "", e.message or "", e.client_ip or "",
+        ])
+    output.seek(0)
+
+    filename = f"relay-events-{_get_hostname()}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/smtp-users/{username}/bounces")
 def portal_user_bounces(
     username: str,
