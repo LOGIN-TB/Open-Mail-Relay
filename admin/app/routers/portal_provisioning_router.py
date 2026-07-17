@@ -81,6 +81,9 @@ def _resolve_package(db: Session, package_name: str | None) -> Package | None:
 def _user_out(user: SmtpUser, pkg_map: dict[int, Package]) -> dict:
     pkg = pkg_map.get(user.package_id) if user.package_id else None
     return {
+        # Numeric relay-side id — the portal's observed mapping needs it to
+        # confirm a pushed access deterministically (no email lookup).
+        "smtp_user_id": user.id,
         "username": user.username,
         "is_active": bool(user.is_active),
         "origin": user.origin,
@@ -179,6 +182,21 @@ def list_smtp_users(
         "total": total,
         "items": [_user_out(u, pkg_map) for u in users],
     }
+
+
+@router.get("/smtp-users/{username}")
+def get_smtp_user(username: str, db: Session = Depends(get_db)):
+    """Single-user detail — lets the portal confirm a pushed access without
+    relying on the contact-email lookup (mapping repair, ADR 0002)."""
+    user = db.query(SmtpUser).filter(SmtpUser.username == username.strip().lower()).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="SMTP-Benutzer nicht gefunden")
+    pkg_map: dict[int, Package] = {}
+    if user.package_id:
+        pkg = db.query(Package).filter(Package.id == user.package_id).first()
+        if pkg:
+            pkg_map[pkg.id] = pkg
+    return _user_out(user, pkg_map)
 
 
 # ---------------------------------------------------------------------------

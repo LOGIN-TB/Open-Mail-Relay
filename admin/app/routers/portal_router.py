@@ -54,7 +54,10 @@ logger = logging.getLogger(__name__)
 # Bumped with every portal-facing API extension (capabilities tell the portal
 # WHAT works; this string is the human-readable "which build runs there").
 # 2.8.0: sender_policy (strikte Absenderbindung) + fleet_events.
-VERSION = "2.8.0"
+# 2.8.1: smtp_user_id im v1-Inventar + GET /v1/smtp-users/{username}
+#        (deterministische Zuordnungs-Bestätigung des Portals); Fix:
+#        strikte Absenderbindung sperrte Ausnahme-Benutzer aus.
+VERSION = "2.8.1"
 
 
 # ---------------------------------------------------------------------------

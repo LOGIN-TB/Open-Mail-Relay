@@ -84,6 +84,24 @@ def test_inventory_exposes_new_fields(client):
     row = next(i for i in items if i["username"] == "inv-user")
     assert row["monthly_limit_override"] == 2500
     assert row["monthly_report_enabled"] is True
+    # Numeric id for the portal's deterministic mapping confirmation (2.8.1).
+    assert isinstance(row["smtp_user_id"], int)
+
+
+def test_get_single_smtp_user(client):
+    client.put("/api/portal/v1/smtp-users/single-user", json={
+        "portal_access_id": "acc-4",
+        "password_hash": VALID_HASH,
+        "mail_domain": "single.de",
+    })
+    res = client.get("/api/portal/v1/smtp-users/single-user")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["username"] == "single-user"
+    assert body["mail_domain"] == "single.de"
+    assert isinstance(body["smtp_user_id"], int)
+
+    assert client.get("/api/portal/v1/smtp-users/gibt-es-nicht").status_code == 404
 
 
 def test_load_metric(client, db):
