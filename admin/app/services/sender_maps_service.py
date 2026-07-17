@@ -39,7 +39,10 @@ SENDER_EXEMPT_FILE = settings.POSTFIX_CONFIG_PATH / "sender_policy_exempt"
 STRICT_MARKER = settings.POSTFIX_CONFIG_PATH / "strict_sender_enabled"
 STRICT_SETTING_KEY = "strict_sender_enabled"
 # Restriction class the exempt map resolves to (defined via postconf when the
-# strict switch is applied): soft_sender_policy = reject_known_sender_login_mismatch.
+# strict switch is applied): soft_sender_policy = reject_known_sender_login_mismatch, permit.
+# The trailing 'permit' is essential: without it a DUNNO (sender domain not
+# mapped at all) falls through to the OUTER list and hits
+# reject_sender_login_mismatch — every exempt user would still be strict.
 EXEMPT_CLASS = "soft_sender_policy"
 
 
@@ -241,7 +244,7 @@ def apply_strict_sender_config(db: Session, enabled: bool) -> list[dict]:
         exit_code, output = exec_in_container(
             "sh -c '"
             f'postconf -e "smtpd_restriction_classes = {EXEMPT_CLASS}" && '
-            f'postconf -e "{EXEMPT_CLASS} = reject_known_sender_login_mismatch" && '
+            f'postconf -e "{EXEMPT_CLASS} = reject_known_sender_login_mismatch, permit" && '
             'postconf -e "smtpd_sender_restrictions = check_sasl_access hash:/etc/postfix/sender_policy_exempt, reject_sender_login_mismatch"'
             "'"
         )

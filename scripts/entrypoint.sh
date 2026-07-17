@@ -97,7 +97,7 @@ if [ -f /etc/postfix-config/strict_sender_enabled ] && [ -f /etc/postfix-config/
     fi
     postmap /etc/postfix/sender_policy_exempt
     postconf -e "smtpd_restriction_classes = soft_sender_policy"
-    postconf -e "soft_sender_policy = reject_known_sender_login_mismatch"
+    postconf -e "soft_sender_policy = reject_known_sender_login_mismatch, permit"
     postconf -e "smtpd_sender_restrictions = check_sasl_access hash:/etc/postfix/sender_policy_exempt, reject_sender_login_mismatch"
     echo "Strict sender binding configured"
 fi
